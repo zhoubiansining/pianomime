@@ -1,1 +1,6 @@
 __pycache__/
+dataset/
+diffusion/
+ppo/
+robopianist_rl/
+third_party/
