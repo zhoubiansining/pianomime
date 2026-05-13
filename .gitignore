@@ -4,3 +4,4 @@ diffusion/
 ppo/
 robopianist_rl/
 third_party/
+trained_songs/

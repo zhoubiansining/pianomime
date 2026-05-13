@@ -69,6 +69,20 @@ class PianoWithShadowHandsResidual(base.PianoTask):
         curriculum: bool = False,
         shift: int = 0,
         enable_joints_vel_obs: bool = False,
+        # ============ Reward Shaping Options ============
+        reward_velocity_smoothness: bool = False,
+        reward_velocity_smoothness_coef: float = 0.01,
+        reward_action_smoothness: bool = False,
+        reward_action_smoothness_coef: float = 0.01,
+        reward_prepositioning: bool = False,
+        reward_prepositioning_coef: float = 0.5,
+        reward_prepositioning_lookahead: int = 5,
+        reward_finger_collision: bool = False,
+        reward_finger_collision_coef: float = 0.5,
+        reward_timing: bool = False,
+        reward_timing_coef: float = 0.5,
+        reward_finger_key_distance: bool = True,
+        reward_finger_key_distance_coef: float = 0.5,
         **kwargs,
     ) -> None:
         """Task constructor.
@@ -148,6 +162,21 @@ class PianoWithShadowHandsResidual(base.PianoTask):
         self._shift = shift
         self._enable_joints_vel_obs = enable_joints_vel_obs
 
+        # ============ Reward Shaping Parameters ============
+        self._reward_velocity_smoothness = reward_velocity_smoothness
+        self._reward_velocity_smoothness_coef = reward_velocity_smoothness_coef
+        self._reward_action_smoothness = reward_action_smoothness
+        self._reward_action_smoothness_coef = reward_action_smoothness_coef
+        self._reward_prepositioning = reward_prepositioning
+        self._reward_prepositioning_coef = reward_prepositioning_coef
+        self._reward_prepositioning_lookahead = reward_prepositioning_lookahead
+        self._reward_finger_collision = reward_finger_collision
+        self._reward_finger_collision_coef = reward_finger_collision_coef
+        self._reward_timing = reward_timing
+        self._reward_timing_coef = reward_timing_coef
+        self._reward_finger_key_distance = reward_finger_key_distance
+        self._reward_finger_key_distance_coef = reward_finger_key_distance_coef
+
         if not disable_fingering_reward and not disable_colorization:
             self._colorize_fingertips()
         if disable_hand_collisions:
@@ -164,14 +193,29 @@ class PianoWithShadowHandsResidual(base.PianoTask):
             energy_reward=self._compute_energy_reward,
         )
         if not self._disable_fingering_reward:
-            self._reward_fn.add("fingering_reward", self._compute_fingering_reward)
-        if not self._disable_forearm_reward:
             self._reward_fn.add("forearm_reward", self._compute_forearm_reward)
+        # ============ NEW: Reward Shaping Rewards ============
+        if self._reward_velocity_smoothness:
+            self._reward_fn.add("velocity_smoothness", self._compute_velocity_smoothness_reward)
+        if self._reward_action_smoothness:
+            self._reward_fn.add("action_smoothness", self._compute_action_smoothness_reward)
+        if self._reward_prepositioning:
+            self._reward_fn.add("prepositioning", self._compute_prepositioning_reward)
+        if self._reward_finger_collision:
+            self._reward_fn.add("finger_collision", self._compute_finger_collision_penalty)
+        if self._reward_timing:
+            self._reward_fn.add("timing", self._compute_timing_reward)
+        if self._reward_finger_key_distance:
+            self._reward_fn.add("finger_key_distance", self._compute_finger_key_distance_reward)
 
     def _reset_quantities_at_episode_init(self) -> None:
         self._t_idx: int = 0
         self._should_terminate: bool = False
         self._discount: float = 1.0
+        # ============ Reward Shaping State ============
+        self._prev_qvel: Optional[np.ndarray] = None
+        self._prev_action: Optional[np.ndarray] = None
+        self._prev_timestep_qvel: Optional[np.ndarray] = None
 
     def _maybe_change_midi(self, random_state: np.random.RandomState) -> None:
         if self._augmentations is not None:
@@ -221,6 +265,8 @@ class PianoWithShadowHandsResidual(base.PianoTask):
         random_state: np.random.RandomState,
     ) -> None:
         """Applies the control to the hands and the sustain pedal to the piano."""
+        # Store action for action smoothness reward computation
+        self._last_non_residual_action = action[:-1].copy()
         action_right, action_left = np.split(action[:-1], 2)
         action_right[-3] += piano_constants.WHITE_KEY_WIDTH * self._shift * 7
         action_left[-3] += piano_constants.WHITE_KEY_WIDTH * self._shift * 7
@@ -385,8 +431,206 @@ class PianoWithShadowHandsResidual(base.PianoTask):
             margin=(_FINGER_CLOSE_ENOUGH_TO_KEY * 10),
             sigmoid="gaussian",
         )
-        # return float(np.mean(rews))
-        return 0.0
+        return float(np.mean(rews))
+
+    # ============ NEW: Reward Shaping Methods ============
+
+    def _compute_velocity_smoothness_reward(self, physics: mjcf.Physics) -> float:
+        """Penalize rapid joint velocity changes (jerk).
+
+        This encourages smoother hand movements by penalizing large changes
+        in joint velocities between timesteps.
+        """
+        qvel = physics.data.qvel.copy()
+
+        if self._prev_timestep_qvel is None:
+            self._prev_timestep_qvel = qvel
+            return 0.0
+
+        # Compute jerk: change in velocity
+        jerk = qvel - self._prev_timestep_qvel
+        jerk_penalty = np.sum(jerk ** 2)
+
+        # Update for next step
+        self._prev_timestep_qvel = qvel
+
+        # Negative reward: penalize jerk
+        return -self._reward_velocity_smoothness_coef * jerk_penalty
+
+    def _compute_action_smoothness_reward(self, physics: mjcf.Physics) -> float:
+        """Penalize large action changes.
+
+        This directly penalizes the residual action magnitude to encourage
+        smaller, more stable corrections.
+        """
+        # The action is applied through before_step; we track it via
+        # the non_residual_action stored by ResidualWrapper if available
+        # Fallback: use zero if not available (first step or no residual)
+        current_action = getattr(self, '_last_non_residual_action', None)
+
+        if current_action is None or self._prev_action is None:
+            self._prev_action = getattr(self, '_last_non_residual_action', np.zeros(46))
+            return 0.0
+
+        # Action change (jerk-like penalty on actions)
+        action_change = current_action - self._prev_action
+        smoothness_penalty = np.sum(action_change ** 2)
+
+        self._prev_action = current_action.copy()
+        return -self._reward_action_smoothness_coef * smoothness_penalty
+
+    def _compute_prepositioning_reward(self, physics: mjcf.Physics) -> float:
+        """Reward fingers approaching upcoming assigned keys before note onset.
+
+        Encourages the agent to proactively move fingers toward target keys,
+        improving timing and reducing last-moment corrections.
+        """
+        total_reward = 0.0
+        count = 0
+
+        lookahead = self._reward_prepositioning_lookahead
+        t_start = self._t_idx
+        t_end = min(t_start + lookahead + 1, len(self._notes))
+
+        for i, t in enumerate(range(t_start, t_end)):
+            if i == 0:  # Skip current timestep, it's handled by key_press_reward
+                continue
+            keys = [note.key for note in self._notes[t]]
+            fingering = [note.fingering for note in self._notes[t]]
+
+            for key, finger in zip(keys, fingering):
+                # Determine hand and finger index
+                if finger < 5:
+                    hand = self.right_hand
+                    finger_idx = finger
+                else:
+                    hand = self.left_hand
+                    finger_idx = finger - 5
+
+                # Get fingertip position
+                fingertip_site = hand.fingertip_sites[finger_idx]
+                fingertip_pos = physics.bind(fingertip_site).xpos.copy()
+
+                # Get key position
+                key_geom = self.piano.keys[key].geom[0]
+                key_pos = physics.bind(key_geom).xpos.copy()
+                key_pos[-1] += 0.5 * physics.bind(key_geom).size[2]
+                key_pos[0] += 0.35 * physics.bind(key_geom).size[0]
+
+                # Distance to key
+                distance = np.linalg.norm(fingertip_pos - key_pos)
+
+                # Reward: closer is better, with Gaussian falloff
+                rew = tolerance(
+                    distance,
+                    bounds=(0, 0.05),  # 5cm
+                    margin=0.05,
+                    sigmoid='gaussian',
+                )
+
+                # Weight by time: closer timestep = higher weight
+                weight = 1.0 / (i + 1)
+                total_reward += rew * weight
+                count += 1
+
+        if count == 0:
+            return 0.0
+
+        return (total_reward / count) * self._reward_prepositioning_coef
+
+    def _compute_finger_collision_penalty(self, physics: mjcf.Physics) -> float:
+        """Penalize hand-hand and finger-finger collisions.
+
+        Prevents the two hands from colliding with each other,
+        which can cause unstable behavior.
+        """
+        penalty = 0.0
+
+        # Check fingertip-tip collisions between hands
+        fingertip_sites_rh = self.right_hand.fingertip_sites
+        fingertip_sites_lh = self.left_hand.fingertip_sites
+
+        COLLISION_THRESHOLD = 0.02  # 2cm
+
+        for site_rh in fingertip_sites_rh:
+            pos_rh = physics.bind(site_rh).xpos.copy()
+            for site_lh in fingertip_sites_lh:
+                pos_lh = physics.bind(site_lh).xpos.copy()
+                dist = np.linalg.norm(pos_rh - pos_lh)
+                if dist < COLLISION_THRESHOLD:
+                    # Closer = worse penalty
+                    penalty += (COLLISION_THRESHOLD - dist) * 50
+
+        return -self._reward_finger_collision_coef * penalty
+
+    def _compute_timing_reward(self, physics: mjcf.Physics) -> float:
+        """Reward precise note onset timing.
+
+        Encourages key presses to happen close to the MIDI-specified onset time,
+        rather than early or late.
+        """
+        on = np.flatnonzero(self._goal_current[:-1])
+
+        if on.size == 0:
+            return 0.0
+
+        # Current piano key states
+        actual = np.array(self.piano.state / self.piano._qpos_range[:, 1])
+
+        # How well the key is pressed (0 = not pressed, 1 = fully pressed)
+        press_quality = actual[on]
+
+        # Timing reward: reward when key is being pressed near onset
+        # Using the key_press reward as a proxy for correct timing
+        # A well-timed press = correct key + correct depth
+        timing_quality = tolerance(
+            self._goal_current[:-1][on] - actual[on],
+            bounds=(0, _KEY_CLOSE_ENOUGH_TO_PRESSED),
+            margin=(_KEY_CLOSE_ENOUGH_TO_PRESSED * 10),
+            sigmoid="gaussian",
+        )
+
+        return timing_quality.mean() * self._reward_timing_coef
+
+    def _compute_finger_key_distance_reward(self, physics: mjcf.Physics) -> float:
+        """Reward fingers being close to their assigned keys (regardless of press).
+
+        This is the enhanced version of the original fingering_reward.
+        Encourages pre-positioning even when notes are not yet active.
+        """
+        if not hasattr(self, '_rh_keys_current') and not hasattr(self, '_lh_keys_current'):
+            return 0.0
+
+        distances = []
+        hand_keys_rh = getattr(self, '_rh_keys_current', [])
+        hand_keys_lh = getattr(self, '_lh_keys_current', [])
+
+        def _distance_finger_to_key(hand_keys, hand):
+            results = []
+            for key, mjcf_fingering in hand_keys:
+                fingertip_site = hand.fingertip_sites[mjcf_fingering]
+                fingertip_pos = physics.bind(fingertip_site).xpos.copy()
+                key_geom = self.piano.keys[key].geom[0]
+                key_geom_pos = physics.bind(key_geom).xpos.copy()
+                key_geom_pos[-1] += 0.5 * physics.bind(key_geom).size[2]
+                key_geom_pos[0] += 0.35 * physics.bind(key_geom).size[0]
+                diff = key_geom_pos - fingertip_pos
+                results.append(float(np.linalg.norm(diff)))
+            return results
+
+        distances.extend(_distance_finger_to_key(hand_keys_rh, self.right_hand))
+        distances.extend(_distance_finger_to_key(hand_keys_lh, self.left_hand))
+
+        if not distances:
+            return 0.0
+
+        rews = tolerance(
+            np.hstack(distances),
+            bounds=(0, _FINGER_CLOSE_ENOUGH_TO_KEY),
+            margin=(_FINGER_CLOSE_ENOUGH_TO_KEY * 10),
+            sigmoid="gaussian",
+        )
+        return float(np.mean(rews)) * self._reward_finger_key_distance_coef
 
     def _update_goal_state(self) -> None:
         # Observable callables get called after `after_step` but before

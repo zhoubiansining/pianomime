@@ -138,8 +138,22 @@ def get_env(args, record_dir: Optional[Path] = None):
                 reduced_action_space=False,
                 residual_factor=args.residual_factor,
                 curriculum=args.curriculum,
+                # ============ Reward Shaping ============
+                reward_velocity_smoothness=args.reward_velocity_smoothness,
+                reward_velocity_smoothness_coef=args.reward_velocity_smoothness_coef,
+                reward_action_smoothness=args.reward_action_smoothness,
+                reward_action_smoothness_coef=args.reward_action_smoothness_coef,
+                reward_prepositioning=args.reward_prepositioning,
+                reward_prepositioning_coef=args.reward_prepositioning_coef,
+                reward_prepositioning_lookahead=args.reward_prepositioning_lookahead,
+                reward_finger_collision=args.reward_finger_collision,
+                reward_finger_collision_coef=args.reward_finger_collision_coef,
+                reward_timing=args.reward_timing,
+                reward_timing_coef=args.reward_timing_coef,
+                reward_finger_key_distance=args.reward_finger_key_distance,
+                reward_finger_key_distance_coef=args.reward_finger_key_distance_coef,
             )
-    else:   
+    else:
         task = piano_with_shadow_hands_res.PianoWithShadowHandsResidual(
             midi=music.load(args.mimic_task),
             change_color_on_activation=True,
@@ -154,6 +168,20 @@ def get_env(args, record_dir: Optional[Path] = None):
             gravity_compensation=True,
             reduced_action_space=False,
             residual_factor=args.residual_factor,
+            # ============ Reward Shaping ============
+            reward_velocity_smoothness=args.reward_velocity_smoothness,
+            reward_velocity_smoothness_coef=args.reward_velocity_smoothness_coef,
+            reward_action_smoothness=args.reward_action_smoothness,
+            reward_action_smoothness_coef=args.reward_action_smoothness_coef,
+            reward_prepositioning=args.reward_prepositioning,
+            reward_prepositioning_coef=args.reward_prepositioning_coef,
+            reward_prepositioning_lookahead=args.reward_prepositioning_lookahead,
+            reward_finger_collision=args.reward_finger_collision,
+            reward_finger_collision_coef=args.reward_finger_collision_coef,
+            reward_timing=args.reward_timing,
+            reward_timing_coef=args.reward_timing_coef,
+            reward_finger_key_distance=args.reward_finger_key_distance,
+            reward_finger_key_distance_coef=args.reward_finger_key_distance_coef,
         )
 
     env = composer_utils.Environment(

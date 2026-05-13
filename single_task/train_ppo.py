@@ -89,6 +89,26 @@ class Args:
     rsi: bool = False
     curriculum: bool = False
     total_iters: int = 1000
+    # ============ Reward Shaping Options (Optional) ============
+    # Velocity Smoothness: penalize rapid joint velocity changes
+    reward_velocity_smoothness: bool = False
+    reward_velocity_smoothness_coef: float = 0.01
+    # Action Smoothness (Jerk Penalty): penalize large action changes
+    reward_action_smoothness: bool = False
+    reward_action_smoothness_coef: float = 0.01
+    # Pre-positioning Reward: reward finger approach before note onset
+    reward_prepositioning: bool = False
+    reward_prepositioning_coef: float = 0.5
+    reward_prepositioning_lookahead: int = 5
+    # Finger Collision Penalty: penalize hand-hand/finger-finger collision
+    reward_finger_collision: bool = False
+    reward_finger_collision_coef: float = 0.5
+    # Timing Reward: reward precise note onset timing
+    reward_timing: bool = False
+    reward_timing_coef: float = 0.5
+    # Finger-to-Key Distance Reward: reward fingers close to assigned keys
+    reward_finger_key_distance: bool = True  # Enable by default (was hardcoded to 0)
+    reward_finger_key_distance_coef: float = 0.5
 
 def prefix_dict(prefix: str, d: dict) -> dict:
     return {f"{prefix}/{k}": v for k, v in d.items()}
