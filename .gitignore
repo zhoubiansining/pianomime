@@ -1,0 +1,37 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local environments.
+.venv/
+venv/
+env/
+
+# Large PianoMime artifacts are reproducible/downloadable and should not be
+# committed to GitHub.
+dataset/
+dataset_hl.zarr/
+dataset_ll.zarr/
+checkpoint_*.ckpt
+artifacts/
+
+# Generated experiment outputs.
+baseline_results/
+results/
+runs/
+robopianist_rl/
+trained_songs/
+00000.mp4
+00001.mp4
+*.mp4
+*.npy
+multi_task/trajectories/
+single_task/videos/
+
+# Local/editor noise.
+.DS_Store
+__MACOSX/
+.vscode/
+.idea/

@@ -1,0 +1,210 @@
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+if __name__ == '__main__' and len(sys.argv) != 2:
+    raise SystemExit("Usage: python multi_task/eval_high_level.py <song_name>")
+
+import numpy as np
+import torch
+from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
+from tqdm.auto import tqdm
+from dataset import read_dataset, normalize_data, unnormalize_data
+import goal_auto_encoder.network
+from network import ConditionalUnet1D, VariationalConvMlpEncoder
+from utils import get_env_hl, get_flattend_obs, adjust_ft_fingering
+
+CTRL_TIMESTEP = 0.05
+
+if __name__ == '__main__':
+    pred_horizon = 4
+    action_horizon = 1
+    obs_horizon = 1
+
+    obs_dim = 212
+    action_dim = 36
+
+    midi_channel = 16
+    midi_dim = 212
+
+    noise = 0.01
+    num_seeds = 1
+    task_name = sys.argv[1]
+
+
+    for seed in range(num_seeds):
+        # Set seed
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+
+        dataset_path = str(PROJECT_ROOT / "dataset_hl.zarr")
+
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        # create dataloader
+        dataloader, stats = read_dataset(pred_horizon=pred_horizon,
+                                obs_horizon=obs_horizon,
+                                action_horizon=action_horizon,
+                                dataset_path=dataset_path,
+                                normalization=True)
+
+        ae = goal_auto_encoder.network.Autoencoder(
+            latent_dim=16,
+            cond_dim=64,
+        ).to(device)
+
+        ckpt_path = PROJECT_ROOT / "checkpoint_ae.ckpt"
+        state_dict = torch.load(ckpt_path, map_location=device)
+        ae.load_state_dict(state_dict)
+        encoder = ae.encoder
+
+        def create_midi_encoder(device=device):
+            midi_encoder = VariationalConvMlpEncoder(
+                in_channels=16,
+                mid_channels=32,
+                out_channels=64,
+                latent_dim=32,
+                device=device,
+                noise=0.08,
+            ).to(device)
+            return midi_encoder
+
+        # create network object
+        noise_pred_net = ConditionalUnet1D(
+            input_dim=action_dim,
+            global_cond_dim=obs_dim*obs_horizon,
+            midi_dim=obs_dim,
+            midi_cond_dim=36,
+            midi_encoder=create_midi_encoder,
+        ).to(device)
+
+        ckpt_path = PROJECT_ROOT / "checkpoint_high_level.ckpt"
+        state_dict = torch.load(ckpt_path, map_location=device)
+        ema_noise_pred_net = noise_pred_net
+        ema_noise_pred_net.load_state_dict(state_dict)
+        num_epochs = 3200
+
+        num_diffusion_iters = 100
+        noise_scheduler = DDPMScheduler(
+            num_train_timesteps=num_diffusion_iters,
+            # the choise of beta schedule has big impact on performance
+            # we found squared cosine works the best
+            beta_schedule='squaredcos_cap_v2',
+            # clip output to [-1,1] to improve stability
+            clip_sample=True,
+            # our network predicts noise (instead of denoised action)
+            prediction_type='epsilon'
+        ) 
+        # task_names = os.listdir('trained_songs')
+        num_songs = 1
+        losses = []
+        for i in range(num_songs):
+            print(task_name)
+
+            env, max_steps = get_env_hl(task_name, lookahead=10)
+            trajectory_lh = np.zeros((max_steps, 3, 6))
+            trajectory_rh = np.zeros((max_steps, 3, 6))
+            trajectory = []
+            fingerings = []
+            timestep = env.reset()
+            # Record last fingertip position
+            lh_current, rh_current = env.task.get_fingertip_pos(env.physics)
+            last_fingertip_pos = np.concatenate((lh_current, rh_current), axis=0).flatten()     
+
+            step = 0
+            B = 1
+            loss_ft = 0
+            loss_fingering = 0
+            last_lh_ft = None
+            last_rh_ft = None
+            last_keys = None
+            last_fingering = None
+            with tqdm(total=max_steps, desc="Eval Env") as pbar:
+                while not timestep.last():
+                    cont = np.zeros((4, midi_channel+action_dim))
+                    goal = get_flattend_obs(timestep, 
+                                    lookahead=10,
+                                    exclude_keys=[
+                                                'fingering', 
+                                                'hand', 
+                                                'fingering', 
+                                                'demo', 
+                                                'prior_action', 
+                                                'q_piano',
+                                                ], 
+                                    encoder=encoder, 
+                                    sampling=False)
+                    cont[:, :midi_channel] = goal[:4*midi_channel].reshape((4, -1))
+                    goal = torch.from_numpy(goal)
+                    current = last_fingertip_pos
+                    cond = torch.from_numpy(current)
+                    obs = torch.cat((goal, cond), dim=-1).float()
+                    obs = normalize_data(obs, stats['obs']).to(device)
+                    with torch.no_grad():
+                        obs = obs.unsqueeze(0)
+                        # initialize action from Guassian noise
+                        noisy_action = torch.randn(
+                            (B, pred_horizon, action_dim), device=device)
+                        naction = noisy_action
+
+                        # init scheduler
+                        noise_scheduler.set_timesteps(num_diffusion_iters)
+
+                        for k in noise_scheduler.timesteps:
+                            # predict noise
+                            noise_pred = ema_noise_pred_net(
+                                sample=naction,
+                                timestep=k,
+                                global_cond=obs
+                            )
+
+                            # inverse diffusion step (remove noise)
+                            naction = noise_scheduler.step(
+                                model_output=noise_pred,
+                                timestep=k,
+                                sample=naction
+                            ).prev_sample
+                    # naction = naction.detach().to('cpu').numpy().flatten()
+
+                    naction = naction.detach().to('cpu').numpy()
+                    # Append 10 dimensions for fingering (not actually used)
+                    naction = np.concatenate((naction, np.zeros((1, 4, 10))), axis=2).flatten()
+                    
+                    naction = unnormalize_data(naction, stats['action'])
+                    naction = naction.reshape(B, 4, -1)
+                    action = naction[0][0]
+                    # Get fingertip position from the action
+                    nft = naction[0, :, :36]
+                    ft = action[:36]
+                    goal = timestep.observation['goal'][:88]
+                    keys = np.nonzero(goal)
+
+                    # Adjust trajectory to align with the training data
+                    lh_ft, rh_ft, fingering = adjust_ft_fingering(env, keys, 
+                                                                nft[0][:18].reshape(6, 3).T,
+                                                                nft[0][18:].reshape(6, 3).T,
+                                                                last_keys, last_lh_ft, last_rh_ft, 
+                                                                last_fingering)
+                    last_lh_ft = lh_ft
+                    last_rh_ft = rh_ft
+                    last_keys = keys
+                    last_fingering = fingering
+                    ft = np.concatenate((lh_ft.T.flatten(), rh_ft.T.flatten()))
+                    trajectory_lh[step] = lh_ft
+                    trajectory_rh[step] = rh_ft
+                    last_fingertip_pos = ft
+                    step += 1
+                    timestep = env.step(np.zeros(47))
+                    pbar.update(1)
+
+            trajectories_dir = PROJECT_ROOT / "multi_task" / "trajectories"
+            trajectories_dir.mkdir(parents=True, exist_ok=True)
+            # Save the trajectory
+            np.save(trajectories_dir / f"{task_name}_trajectory.npy", trajectory)
+            np.save(trajectories_dir / f"{task_name}_left_hand_action_list.npy", trajectory_lh)
+            np.save(trajectories_dir / f"{task_name}_right_hand_action_list.npy", trajectory_rh)
+
+            # Release the VideoCapture and VideoWriter objects
