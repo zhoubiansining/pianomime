@@ -128,7 +128,7 @@ All changes below are engineering/runtime hygiene changes. They do not change mo
 - Create a tested `requirements-repro.txt` or lockfile for Python 3.11 + CUDA 11.8.
 - Split `multi_task/utils.py` into observation utilities and environment-construction utilities.
 - Remove or archive unused experimental training scripts after baseline reproduction is fully documented.
-- Convert this directory back into a Git repository or re-clone from upstream so future changes are reviewable by diff/commit.
+- Push the current local Git repository after the team creates the empty GitHub remote.
 
 ## Changes Made On 2026-05-14
 

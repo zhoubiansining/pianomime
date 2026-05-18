@@ -27,8 +27,9 @@ worktree: /home/gaoj/share4/_piano/pianomime
 gitdir:   /home/gaoj/piano_scratch/pianomime_gitdir
 ```
 
-That setup has already produced the initial `Prepare course PianoMime baseline
-fork` commit. Check the current hash with `git log --oneline -1`.
+That setup has already produced local commits, including the baseline fork and
+the completed baseline handoff documentation. Check the current hash with
+`git log --oneline -1`.
 
 If recreating from scratch, prefer:
 
