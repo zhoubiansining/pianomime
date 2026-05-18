@@ -21,6 +21,10 @@ the shared server directory is mounted at `/home/gaoj/share4`.
 The shared source tree is the source of truth. Long-running experiments should
 run from the local runtime copy created by `scripts/sync_to_runtime.sh`.
 
+For the already reproduced baseline metrics, videos, and training curve, read
+`docs/BASELINE_RESULTS.md` first. Do not rerun completed baseline jobs unless
+you are validating a new environment.
+
 ## Environment
 
 Use the existing environment if it is present:
@@ -103,3 +107,10 @@ bash scripts/run_ppo.sh Petrunko_3
 
 For unattended runs, prefer the tmux scheduler described in
 `docs/EXPERIMENT_AUTOMATION.md`.
+
+Current reproduced result files are under:
+
+```bash
+ls /home/gaoj/share4/_piano/baseline_results/single_song/videos
+ls /home/gaoj/share4/_piano/baseline_results/multisong/videos
+```

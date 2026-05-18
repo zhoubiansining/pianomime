@@ -98,6 +98,13 @@ MULTISONG_TASKS="Alone_1 Numb_1 NoTimeToDie_1"
 PPO_TASKS="Petrunko_3"
 ```
 
+The completed baseline result suite also includes four additional unseen
+generalist songs:
+
+```text
+Forester_1 EyesClosed_1 Paradise_1 SomewhereOnlyWeKnow_1
+```
+
 Override any set through environment variables:
 
 ```bash

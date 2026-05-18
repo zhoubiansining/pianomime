@@ -1,56 +1,111 @@
 # Course Baseline Notes
 
-This fork is the course working copy for the Dexterous Piano Track. It keeps the
-original PianoMime task logic intact, while adding reproducibility scripts,
-headless-server fixes, baseline result logging, and maintenance notes.
+Last updated: 2026-05-18
+
+This fork is the course working copy for the Dexterous Piano Track. It keeps
+the original PianoMime baseline logic intact, while adding reproducibility
+scripts, headless-server fixes, baseline result logging, and maintenance notes.
+
+## Start Here
+
+- Full reproduced result index: `docs/BASELINE_RESULTS.md`
+- Detailed code-change summary: `docs/CODE_MODIFICATION_SUMMARY.md`
+- Usage and setup guide: `docs/USAGE.md`
+- Unattended tmux runner: `docs/EXPERIMENT_AUTOMATION.md`
+- Current caveats: `docs/problems.md`
+- Planning / completion status: `docs/planning.md`
 
 ## Code Paths
 
-- Single-song policy: `single_task/train_ppo.py`
-  - Uses a fixed song demonstration trajectory plus IK prior.
-  - PPO learns a residual correction on top of that prior action.
-  - It does not load the multi-task diffusion checkpoints.
-- Single-song action replay baseline: `single_task/test_trained_actions.py`
-  - Replays the provided action trajectory for a song and records precision,
-    recall, F1, and a video.
-- Generalist policy: `multi_task/eval_high_level.py` and
-  `multi_task/eval_low_level.py`
-  - High-level diffusion generates hand trajectories from the MIDI/goal.
-  - Low-level diffusion generates executable actions from those trajectories.
-  - This is the code path used for unseen-song generalization.
+Single-song policy:
 
-The single-song and generalist policies are conceptually related but are
-separate implementation paths.
+```text
+single_task/train_ppo.py
+single_task/test_trained_actions.py
+single_task/utils.py
+```
+
+This path uses a fixed song demonstration trajectory plus an IK/QP prior.
+PPO learns a residual correction on top of that prior action. It does not load
+the multi-task high-level or low-level diffusion checkpoints.
+
+Generalist policy:
+
+```text
+multi_task/eval_high_level.py
+multi_task/eval_low_level.py
+multi_task/utils.py
+```
+
+This path uses the released diffusion checkpoints. The high-level model
+generates fingertip trajectories from MIDI/goal observations, and the low-level
+model generates executable robot actions from those trajectories and simulator
+observations. It does not use single-song PPO checkpoints.
 
 ## Current Baseline Results
 
-Results are synced to:
+All result files are under:
 
-```bash
+```text
 /home/gaoj/share4/_piano/baseline_results
 ```
 
-Already reproduced:
+Single-song replay baseline:
 
-| Track | Song | Precision | Recall | F1 |
-| --- | --- | ---: | ---: | ---: |
-| single-song replay | `Stan_1` | 0.9991 | 0.9719 | 0.9795 |
-| single-song replay | `Petrunko_3` | 0.9869 | 0.8460 | 0.8900 |
-| single-song replay | `NeverGonnaGiveYouUp_1` | 0.9960 | 0.9260 | 0.9514 |
-| generalist diffusion | `Alone_1` | 0.8283 | 0.6443 | 0.7902 |
+| Song | Precision | Recall | F1 |
+| --- | ---: | ---: | ---: |
+| `Stan_1` | 0.9991 | 0.9719 | 0.9795 |
+| `Petrunko_3` | 0.9869 | 0.8460 | 0.8900 |
+| `NeverGonnaGiveYouUp_1` | 0.9960 | 0.9260 | 0.9514 |
 
-Still scheduled/ongoing:
+Single-song PPO curve:
 
-- Generalist diffusion: `Numb_1`, `NoTimeToDie_1`
-- Single-song PPO residual training curve: `Petrunko_3`
+| Song | Iterations | Env steps | Best F1 | Output |
+| --- | ---: | ---: | ---: | --- |
+| `Petrunko_3` | 2000 | 1,024,000 | 0.795686 | `eval_metrics.csv`, `eval_f1_curve.png`, final rollout video |
+
+Generalist diffusion checkpoint baseline:
+
+| Song | Split | F1 |
+| --- | --- | ---: |
+| `Alone_1` | test | 0.7902 |
+| `Numb_1` | test | 0.7504 |
+| `NoTimeToDie_1` | test | 0.8553 |
+| `Forester_1` | test | 0.7944 |
+| `EyesClosed_1` | test | 0.8569 |
+| `Paradise_1` | test | 0.8104 |
+| `SomewhereOnlyWeKnow_1` | test | 0.7920 |
+
+For exact paths to videos, logs, and CSV files, see
+`docs/BASELINE_RESULTS.md`.
+
+## Baseline Status
+
+The baseline reproduction required by the project PDF is complete:
+
+- 3 training-set single-song videos and metrics are available.
+- A PPO F1 training curve is available.
+- 7 unseen-song generalist videos and metrics are available.
+- Experiments leave logs and reusable CSV files for later comparison.
+
+The next research step is no longer baseline reproduction; it is implementing
+and evaluating improvement ideas against these recorded baseline numbers.
 
 ## Important Commands
+
+Prepare artifacts and environment:
+
+```bash
+cd /home/gaoj/share4/_piano/pianomime
+bash scripts/setup_python_env.sh
+bash scripts/setup_artifacts.sh
+```
 
 Start or reattach the automated tmux baseline runner:
 
 ```bash
 cd /home/gaoj/share4/_piano/pianomime
-GPU_IDS="5 6 7" SESSION=pianomime_baseline RUN_ID=baseline_20260514 \
+GPU_IDS="4 5 6 7" SESSION=pianomime_baseline RUN_ID=baseline_$(date +%Y%m%d) \
   bash scripts/start_tmux_baseline.sh
 tmux attach -t pianomime_baseline
 ```
@@ -61,19 +116,9 @@ Detach without stopping experiments:
 Ctrl-b then d
 ```
 
-Inspect logs:
+Inspect result files:
 
 ```bash
-tail -f /home/gaoj/share4/_piano/baseline_results/logs/tmux_baseline_20260514.log
-tail -f /home/gaoj/share4/_piano/baseline_results/logs/scheduler_baseline_20260514.log
+cat /home/gaoj/share4/_piano/baseline_results/single_song/metrics.csv
+cat /home/gaoj/share4/_piano/baseline_results/multisong/metrics.csv
 ```
-
-See also:
-
-- `docs/USAGE.md`
-- `docs/EXPERIMENT_AUTOMATION.md`
-- `docs/4090_FEASIBILITY.md`
-- `docs/CODEX_HANDOFF_PROMPT.md`
-- `docs/code_audit.md`
-- `docs/problems.md`
-- `docs/planning.md`

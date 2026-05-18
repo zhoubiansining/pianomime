@@ -1,5 +1,9 @@
 # PianoMime Code Audit
 
+Current detailed change list: `docs/CODE_MODIFICATION_SUMMARY.md`.
+
+Current reproduced result list: `docs/BASELINE_RESULTS.md`.
+
 Updated: 2026-05-13
 
 ## Overall Code Logic

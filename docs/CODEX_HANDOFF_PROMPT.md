@@ -20,6 +20,8 @@ has been created.
 
 请先阅读：
 - `COURSE_BASELINE.md`
+- `docs/BASELINE_RESULTS.md`
+- `docs/CODE_MODIFICATION_SUMMARY.md`
 - `docs/USAGE.md`
 - `docs/EXPERIMENT_AUTOMATION.md`
 - `docs/4090_FEASIBILITY.md`
@@ -49,9 +51,14 @@ has been created.
 或
 `export http_proxy=http://10.0.0.204:1090 https_proxy=http://10.0.0.204:1090`
 
-验收标准：
-- single-song replay 至少有 `Stan_1`、`Petrunko_3`、`NeverGonnaGiveYouUp_1` 的 metrics 和视频。
-- generalist diffusion 至少有 `Alone_1`，并继续补 `Numb_1`、`NoTimeToDie_1`。
-- PPO residual 至少为 `Petrunko_3` 产出 `eval_metrics.csv`、`eval_f1_curve.png`、checkpoint/训练日志。
-- 最终给出清晰状态汇报：完成了什么、每项结果在哪里、哪些问题仍未解决、下一步建议。
+当前 baseline 验收状态：
+- single-song replay 已有 `Stan_1`、`Petrunko_3`、`NeverGonnaGiveYouUp_1` 的 metrics 和视频。
+- PPO residual 已为 `Petrunko_3` 产出 `eval_metrics.csv`、`eval_f1_curve.png`、训练日志和 final rollout video。
+- generalist diffusion 已有 7 首 unseen test songs：`Alone_1`、`Numb_1`、`NoTimeToDie_1`、`Forester_1`、`EyesClosed_1`、`Paradise_1`、`SomewhereOnlyWeKnow_1`。
+
+下一步验收标准：
+- 从 `docs/BASELINE_RESULTS.md` 读取 baseline 数字，不要重复跑已完成 baseline，除非需要验证。
+- 改进 single-song policy 时，给出 baseline vs improved 的 F1 curve 和 play-through video。
+- 改进 generalist policy 时，在至少 5 首 unseen pieces 上报告 baseline vs improved F1。
+- 所有新改动都要同步记录到 `docs/planning.md`、`docs/problems.md` 或新增实验文档。
 ```

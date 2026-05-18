@@ -10,10 +10,17 @@ This working copy adds course reproducibility docs, headless-server fixes, and
 tmux automation for the Dexterous Piano Track baseline. Start here:
 
 - `COURSE_BASELINE.md`
+- `docs/BASELINE_RESULTS.md`
+- `docs/CODE_MODIFICATION_SUMMARY.md`
 - `docs/USAGE.md`
 - `docs/EXPERIMENT_AUTOMATION.md`
 - `docs/4090_FEASIBILITY.md`
 - `docs/CODEX_HANDOFF_PROMPT.md`
+
+The reproduced baseline currently includes three training-set single-song
+videos, one `Petrunko_3` PPO F1 training curve, and seven unseen-song
+generalist diffusion evaluation videos. Exact paths and metrics are recorded in
+`docs/BASELINE_RESULTS.md`.
 
 The original PianoMime README continues below.
 
