@@ -417,8 +417,24 @@ def get_env_test(task_name, enable_ik = True, record_dir=None, lookahead = 3,
     return env.env
     
 
-def get_env_hl(task_name, record_dir=None, lookahead = 3, use_fingering_emb=False,
-                use_midi=False):
+def get_env_hl(
+    task_name,
+    record_dir=None,
+    lookahead=3,
+    use_fingering_emb=False,
+    use_midi=False,
+    control_timestep=0.05,
+    disable_hand_collisions=True,
+    disable_forearm_reward=True,
+    disable_fingering_reward=False,
+    midi_start_from=0,
+    gravity_compensation=True,
+    residual_factor=1,
+    shift=0,
+    record_every=1,
+    camera_id="piano/back",
+    clip=True,
+):
     (
         piano_with_shadow_hands_res,
         CanonicalSpecWrapper,
@@ -446,15 +462,15 @@ def get_env_hl(task_name, record_dir=None, lookahead = 3, use_fingering_emb=Fals
             midi=music.load(task_name),
             change_color_on_activation=True,
             trim_silence=True,
-            control_timestep=0.05,
-            disable_hand_collisions=True,
-            disable_forearm_reward=True,
-            disable_fingering_reward=False,
-            midi_start_from=0,
+            control_timestep=control_timestep,
+            disable_hand_collisions=disable_hand_collisions,
+            disable_forearm_reward=disable_forearm_reward,
+            disable_fingering_reward=disable_fingering_reward,
+            midi_start_from=midi_start_from,
             n_steps_lookahead=lookahead,
-            gravity_compensation=True,
-            residual_factor=1,
-            shift=0,
+            gravity_compensation=gravity_compensation,
+            residual_factor=residual_factor,
+            shift=shift,
             enable_joints_vel_obs=True,
             fingering_lookahead=use_fingering_emb,
         )
@@ -465,15 +481,15 @@ def get_env_hl(task_name, record_dir=None, lookahead = 3, use_fingering_emb=Fals
             # midi=music.load(task_name),
             change_color_on_activation=True,
             trim_silence=trim,
-            control_timestep=0.05,
-            disable_hand_collisions=True,
-            disable_forearm_reward=True,
-            disable_fingering_reward=False,
-            midi_start_from=0,
+            control_timestep=control_timestep,
+            disable_hand_collisions=disable_hand_collisions,
+            disable_forearm_reward=disable_forearm_reward,
+            disable_fingering_reward=disable_fingering_reward,
+            midi_start_from=midi_start_from,
             n_steps_lookahead=lookahead,
-            gravity_compensation=True,
-            residual_factor=1,
-            shift=0,
+            gravity_compensation=gravity_compensation,
+            residual_factor=residual_factor,
+            shift=shift,
             enable_joints_vel_obs=True,
             fingering_lookahead=use_fingering_emb,
         )
@@ -484,14 +500,14 @@ def get_env_hl(task_name, record_dir=None, lookahead = 3, use_fingering_emb=Fals
     if record_dir is not None:
         env = PianoSoundVideoWrapper(
             env,
-            record_every=1,
-            camera_id="piano/back",
+            record_every=record_every,
+            camera_id=camera_id,
             record_dir=record_dir,
         )
     env = MidiEvaluationWrapper(
         environment=env, deque_size=1
     )
-    env = CanonicalSpecWrapper(env, clip=True)
+    env = CanonicalSpecWrapper(env, clip=clip)
 
     env = SinglePrecisionWrapper(env)
     env = DmControlWrapper(env)
@@ -500,8 +516,29 @@ def get_env_hl(task_name, record_dir=None, lookahead = 3, use_fingering_emb=Fals
     
     return env.env, length
 
-def get_env_ll(task_name, enable_ik = True, record_dir=None, lookahead = 3, external_demo=False, use_fingering_emb=False,
-            external_fingering=None, use_midi=False):
+def get_env_ll(
+    task_name,
+    enable_ik=True,
+    record_dir=None,
+    lookahead=3,
+    external_demo=False,
+    use_fingering_emb=False,
+    external_fingering=None,
+    use_midi=False,
+    control_timestep=0.05,
+    disable_hand_collisions=True,
+    disable_forearm_reward=True,
+    disable_fingering_reward=False,
+    midi_start_from=0,
+    gravity_compensation=True,
+    residual_factor_ik=0.03,
+    residual_factor_no_ik=1,
+    shift=0,
+    record_every=1,
+    camera_id="piano/back",
+    demo_ctrl_timestep=0.05,
+    clip=True,
+):
     (
         piano_with_shadow_hands_res,
         CanonicalSpecWrapper,
@@ -532,15 +569,15 @@ def get_env_ll(task_name, enable_ik = True, record_dir=None, lookahead = 3, exte
             midi=music.load(task_name),
             change_color_on_activation=True,
             trim_silence=True,
-            control_timestep=0.05,
-            disable_hand_collisions=True,
-            disable_forearm_reward=True,
-            disable_fingering_reward=False,
-            midi_start_from=0,
+            control_timestep=control_timestep,
+            disable_hand_collisions=disable_hand_collisions,
+            disable_forearm_reward=disable_forearm_reward,
+            disable_fingering_reward=disable_fingering_reward,
+            midi_start_from=midi_start_from,
             n_steps_lookahead=lookahead,
-            gravity_compensation=True,
-            residual_factor=0.03 if enable_ik else 1,
-            shift=0,
+            gravity_compensation=gravity_compensation,
+            residual_factor=residual_factor_ik if enable_ik else residual_factor_no_ik,
+            shift=shift,
             enable_joints_vel_obs=True,
             fingering_lookahead=use_fingering_emb,
         )
@@ -549,15 +586,15 @@ def get_env_ll(task_name, enable_ik = True, record_dir=None, lookahead = 3, exte
             note_trajectory=note_traj,
             change_color_on_activation=True,
             trim_silence=trim,
-            control_timestep=0.05,
-            disable_hand_collisions=True,
-            disable_forearm_reward=True,
-            disable_fingering_reward=False,
-            midi_start_from=0,
+            control_timestep=control_timestep,
+            disable_hand_collisions=disable_hand_collisions,
+            disable_forearm_reward=disable_forearm_reward,
+            disable_fingering_reward=disable_fingering_reward,
+            midi_start_from=midi_start_from,
             n_steps_lookahead=lookahead,
-            gravity_compensation=True,
-            residual_factor=0.03 if enable_ik else 1,
-            shift=0,
+            gravity_compensation=gravity_compensation,
+            residual_factor=residual_factor_ik if enable_ik else residual_factor_no_ik,
+            shift=shift,
             enable_joints_vel_obs=True,
             fingering_lookahead=use_fingering_emb,
         )
@@ -569,8 +606,8 @@ def get_env_ll(task_name, enable_ik = True, record_dir=None, lookahead = 3, exte
     if record_dir is not None:
         env = PianoSoundVideoWrapper(
             env,
-            record_every=1,
-            camera_id="piano/back",
+            record_every=record_every,
+            camera_id=camera_id,
             record_dir=record_dir,
         )
     if use_fingering_emb:
@@ -588,14 +625,14 @@ def get_env_ll(task_name, enable_ik = True, record_dir=None, lookahead = 3, exte
     env = ResidualWrapper(env, 
                         demonstrations_lh=left_hand_action_list,
                         demonstrations_rh=right_hand_action_list,
-                        demo_ctrl_timestep=0.05,
+                        demo_ctrl_timestep=demo_ctrl_timestep,
                         enable_ik=enable_ik,
                         external_demo=external_demo,)
     env = MidiEvaluationWrapper(
         environment=env, deque_size=1
     )
     if enable_ik:
-        env = CanonicalSpecWrapper(env, clip=True)
+        env = CanonicalSpecWrapper(env, clip=clip)
 
     env = SinglePrecisionWrapper(env)
     env = DmControlWrapper(env)

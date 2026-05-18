@@ -31,6 +31,13 @@ GPU_IDS="0 1 2" bash scripts/start_tmux_baseline.sh
 If `GPU_IDS` is omitted, the scheduler queries all visible GPUs and waits until
 one is below `GPU_FREE_MEM_MB`, which defaults to `5000`.
 
+Default task lists, GPU thresholds, paths, and core baseline hyperparameters
+come from `configs/baseline.toml`. To use a different config:
+
+```bash
+CONFIG_FILE=configs/my_method.toml GPU_IDS="0 1 2" bash scripts/start_tmux_baseline.sh
+```
+
 ## Attach, Detach, Logs
 
 Attach:
@@ -90,7 +97,7 @@ same command with the same `RUN_ID`.
 
 ## Default Task Set
 
-The scheduler defaults to:
+The default task set is maintained in `configs/baseline.toml`:
 
 ```text
 SINGLE_REPLAY_TASKS="Stan_1 Petrunko_3 NeverGonnaGiveYouUp_1"
@@ -105,7 +112,7 @@ generalist songs:
 Forester_1 EyesClosed_1 Paradise_1 SomewhereOnlyWeKnow_1
 ```
 
-Override any set through environment variables:
+Temporarily override any set through environment variables:
 
 ```bash
 MULTISONG_TASKS="Numb_1 NoTimeToDie_1" PPO_TASKS="Petrunko_3" \

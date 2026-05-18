@@ -1,47 +1,35 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PYTHON_BIN="${PYTHON_BIN:-python}"
-RUN_DIR="${RUN_DIR:-$PROJECT_ROOT}"
-ROOT_DIR="${ROOT_DIR:-/tmp/robopianist/rl/}"
+CONFIG_FILE="${CONFIG_FILE:-$PROJECT_ROOT/configs/baseline.toml}"
+eval "$("${CONFIG_PYTHON:-python3}" "$PROJECT_ROOT/scripts/config_export.py" "$CONFIG_FILE" paths environment)"
+export PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/single_task:${PYTHONPATH:-}"
+
+SONG="${1:-}"
+if [[ -z "$SONG" ]]; then
+  SONG="$(CONFIG_FILE="$CONFIG_FILE" "${CONFIG_PYTHON:-python3}" - <<'PY'
+from pianomime_config import load_config, section
+cfg = load_config()
+songs = section(cfg, "single_song").get("ppo_songs", [])
+if not songs:
+    raise SystemExit("single_song.ppo_songs is empty")
+print(songs[0])
+PY
+)"
+fi
+
 GPU_ID="${CUDA_VISIBLE_DEVICES:-0}"
 EGL_DEVICE_ID="${MUJOCO_EGL_DEVICE_ID:-$GPU_ID}"
 
-cd "$RUN_DIR"
+cd "${RUN_DIR:-$PROJECT_ROOT}"
 
-WANDB_DIR="${WANDB_DIR:-/tmp/robopianist/}" \
-MUJOCO_GL="${MUJOCO_GL:-egl}" \
-XLA_PYTHON_CLIENT_PREALLOCATE="${XLA_PYTHON_CLIENT_PREALLOCATE:-false}" \
-CUDA_VISIBLE_DEVICES="$GPU_ID" \
-MUJOCO_EGL_DEVICE_ID="$EGL_DEVICE_ID" \
-PYTHONPATH="$PROJECT_ROOT:${PYTHONPATH:-}" \
-"$PYTHON_BIN" "$PROJECT_ROOT/single_task/train_ppo.py" \
-    --root-dir "$ROOT_DIR" \
-    --warmstart-steps 5000 \
-    --max-steps 1000000 \
-    --discount 0.99 \
-    --trim-silence \
-    --gravity-compensation \
-    --control-timestep 0.05 \
-    --n-steps-lookahead 0 \
-    --disable_fingering_reward \
-    --disable_hand_collisions \
-    --disable_forearm_reward \
-    --tqdm-bar \
-    --eval-episodes 1 \
-    --camera-id "piano/back" \
-    --midi-start-from 0 \
-    --residual-action \
-    --frame-stack 4 \
-    --num-envs 1 \
-    --initial-lr 3e-4 \
-    --lr-decay-rate 0.999 \
-    --n-steps 512 \
-    --mimic-task "Petrunko_3" \
-    --environment-name "Petrunko_3" \
-    --use-note-trajectory \
-    --total-iters 2000 \
-    --residual-factor 0.03 \
-    --deepmimic \
-    
+export CUDA_VISIBLE_DEVICES="$GPU_ID"
+export MUJOCO_EGL_DEVICE_ID="$EGL_DEVICE_ID"
+
+extra_args=()
+if [[ "${DRY_RUN:-0}" == "1" ]]; then
+  extra_args+=(--dry-run)
+fi
+
+"$PYTHON_BIN" "$PROJECT_ROOT/scripts/run_ppo_from_config.py" "$SONG" --config "$CONFIG_FILE" "${extra_args[@]}"

@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SHARED_ROOT="${SHARED_ROOT:-/home/gaoj/share4/_piano}"
-PROJECT_DIR="${PROJECT_DIR:-$SHARED_ROOT/pianomime}"
-RUNTIME_ROOT="${RUNTIME_ROOT:-/home/gaoj/piano_scratch}"
-RUNTIME_DIR="${RUNTIME_DIR:-$RUNTIME_ROOT/pianomime}"
+SCRIPT_PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONFIG_FILE="${CONFIG_FILE:-$SCRIPT_PROJECT_DIR/configs/baseline.toml}"
+eval "$("${CONFIG_PYTHON:-python3}" "$SCRIPT_PROJECT_DIR/scripts/config_export.py" "$CONFIG_FILE" paths)"
 
 if [[ "$RUNTIME_DIR" == "/" || "$RUNTIME_DIR" == "$PROJECT_DIR" ]]; then
   echo "Refusing unsafe RUNTIME_DIR=$RUNTIME_DIR" >&2

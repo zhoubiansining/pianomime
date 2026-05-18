@@ -21,6 +21,23 @@
 
 如果只是查看已经完成的 baseline metrics、videos 和 training curve，请先读 `docs/BASELINE_RESULTS_zh.md`。除非在验证新环境，否则不需要重复跑已完成 baseline。
 
+## 配置文件
+
+默认配置文件是：
+
+```text
+configs/baseline.toml
+```
+
+路径、artifacts、GPU scheduler、single-song replay、PPO residual training、generalist high-level/low-level evaluation 的核心参数都在这里。需要改曲目、结果目录或超参时，建议复制一份新配置：
+
+```bash
+cp configs/baseline.toml configs/my_method.toml
+CONFIG_FILE=configs/my_method.toml bash scripts/run_multisong_task.sh Alone_1 0
+```
+
+详细说明见 `docs/CONFIGURATION_zh.md`。
+
 ## 环境
 
 如果已有环境，直接激活：
@@ -70,29 +87,21 @@ bash scripts/check_4090_feasibility.sh
 
 ## 手动 Baseline 命令
 
+优先使用下面这些脚本入口；它们会读取 `CONFIG_FILE` 指定的 TOML 配置。
+
 Single-song action replay：
 
 ```bash
-cd /home/gaoj/piano_scratch/runs/single_Stan_1
-export PYTHONPATH=/home/gaoj/piano_scratch/pianomime:/home/gaoj/piano_scratch/pianomime/single_task
-export CUDA_VISIBLE_DEVICES=0 MUJOCO_EGL_DEVICE_ID=0 MUJOCO_GL=egl
-/home/gaoj/share4/_piano/.venv/bin/python \
-  /home/gaoj/piano_scratch/pianomime/single_task/test_trained_actions.py Stan_1
+bash scripts/test_trained_actions.sh Stan_1
 ```
 
 Generalist diffusion baseline：
 
 ```bash
-cd /home/gaoj/piano_scratch/runs/multisong_Alone_1
-export PYTHONPATH=/home/gaoj/piano_scratch/pianomime
-export CUDA_VISIBLE_DEVICES=0 MUJOCO_EGL_DEVICE_ID=0 MUJOCO_GL=egl
-/home/gaoj/share4/_piano/.venv/bin/python \
-  /home/gaoj/piano_scratch/pianomime/multi_task/eval_high_level.py Alone_1
-/home/gaoj/share4/_piano/.venv/bin/python \
-  /home/gaoj/piano_scratch/pianomime/multi_task/eval_low_level.py Alone_1
+bash scripts/run_multisong_task.sh Alone_1 0
 ```
 
-PPO residual baseline 使用原始任务超参：
+PPO residual baseline：
 
 ```bash
 bash scripts/run_ppo.sh Petrunko_3

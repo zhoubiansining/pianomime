@@ -1,6 +1,6 @@
 # 代码修改总结
 
-最后更新：2026-05-18
+最后更新：2026-05-19
 
 本文档记录为了在课程服务器上稳定复现 PianoMime baseline 所做的工程修改。修改目标是尽量保持原始 baseline 算法不变，同时让仓库更容易运行、恢复和交给同学维护。
 
@@ -10,8 +10,8 @@
 
 - 没有重新设计 reward terms。
 - 没有修改 model architecture。
-- 没有修改 diffusion checkpoint、PPO policy architecture 或 task definition。
-- 保留了核心 baseline hyperparameters，例如 diffusion horizons、residual factor、wrapper order、frame stack 和 control timestep。
+- 没有修改 diffusion checkpoint 或 task definition。
+- baseline 默认的 PPO policy architecture 和核心 hyperparameters 保持不变；这些默认值现在集中写在 `configs/baseline.toml`，便于后续新方法复制后修改。
 
 绝大多数修改都是路径处理、依赖容错、日志记录、自动化和运行稳定性相关的工程改动。
 
@@ -23,13 +23,53 @@
 | Multi-task utilities | `multi_task/utils.py` | 延迟导入环境依赖、repo-relative dataset lookup、CPU/GPU 安全的 encoder device 使用、eval observation encoding 中使用 `torch.no_grad()`。 |
 | Single-song PPO training | `single_task/train_ppo.py` | 持久化 evaluation CSV、保存 F1 curve image、支持更安全 rerun、支持 pretrained resume、final rollout guard。 |
 | Single-song replay | `single_task/test_trained_actions.py`, `single_task/utils.py` | 使用 repo-relative dataset/action loading，并减少启动时的脆弱导入。 |
+| Central config | `configs/baseline.toml`, `pianomime_config.py`, `scripts/config_export.py`, `scripts/run_ppo_from_config.py` | 将路径、任务列表、scheduler 默认值、single-song/generalist baseline 超参集中到 TOML 配置。 |
 | Audio/video robustness | `robopianist/wrappers/sound.py` | 音频依赖变成可选；缺少 FluidSynth/PortAudio 时仍能生成 silent video。 |
 | Automation scripts | `scripts/*.sh`，尤其是 `baseline_scheduler.sh`, `start_tmux_baseline.sh`, `sync_to_runtime.sh`, `run_multisong_task.sh` | tmux 运行、GPU 等待和锁定、scratch 目录执行、结果同步、任务可重复运行。 |
 | Setup/release docs | `README.md`, `COURSE_BASELINE.md`, `docs/*.md`, `.gitignore`, `requirements.txt` | 增加课程文档、artifact setup、结果索引、代码审计、忽略大型下载/生成文件。 |
 
 ## 代表性修改
 
-### 1. Repo-root 路径处理
+### 1. Central config
+
+相关文件：
+
+```text
+configs/baseline.toml
+pianomime_config.py
+scripts/config_export.py
+scripts/run_ppo_from_config.py
+scripts/baseline_scheduler.sh
+scripts/run_ppo.sh
+single_task/train_ppo.py
+single_task/test_trained_actions.py
+multi_task/eval_high_level.py
+multi_task/eval_low_level.py
+```
+
+baseline 的路径、任务列表和核心超参数现在统一从 `configs/baseline.toml` 读取：
+
+```toml
+[single_song.ppo]
+total_iters = 2000
+residual_factor = 0.03
+ppo_batch_size = 1024
+policy_activation = "gelu"
+policy_pi_arch = [1024, 256]
+policy_vf_arch = [1024, 256]
+```
+
+脚本入口通过同一套 loader 展开配置：
+
+```python
+cfg = load_config(args.config)
+ppo = dict(section(cfg, "single_song", "ppo"))
+command.extend(cli_args_from_mapping(ppo))
+```
+
+这样后续同学做新方法时可以复制一份 config，而不是在多个 shell/Python 文件里寻找分散的默认值。
+
+### 2. Repo-root 路径处理
 
 相关文件：
 
@@ -64,7 +104,7 @@ left_hand_action_list = np.load(
 
 这样脚本可以从 tmux run directory 或 local scratch 运行，不需要用户手动切到某个固定目录。
 
-### 2. CPU/GPU 安全的模型加载
+### 3. CPU/GPU 安全的模型加载
 
 相关文件：
 
@@ -100,7 +140,7 @@ with torch.no_grad():
 
 这可以避免 CPU-only fallback 直接崩溃，也避免 eval 时构建不必要的 autograd graph。
 
-### 3. Lazy environment imports
+### 4. Lazy environment imports
 
 相关文件：
 
@@ -123,7 +163,7 @@ def _env_deps():
 
 这让轻量 import 和错误参数检查更快，也减少 headless server 上导入时失败的概率。
 
-### 4. Train/test note trajectory lookup
+### 5. Train/test note trajectory lookup
 
 相关文件：
 
@@ -144,7 +184,7 @@ def _load_note_trajectory(task_name):
 
 这对 unseen-song evaluation 很重要，因为 test songs 位于 `dataset/notes_test`。
 
-### 5. PPO training metrics 和 F1 curve
+### 6. PPO training metrics 和 F1 curve
 
 相关文件：
 
@@ -184,7 +224,7 @@ eval_metrics.csv
 eval_f1_curve.png
 ```
 
-### 6. PPO rerun 和中断恢复
+### 7. PPO rerun 和中断恢复
 
 相关文件：
 
@@ -219,7 +259,7 @@ if not checkpoint_path.with_suffix(".zip").exists():
     return
 ```
 
-### 7. Silent-video fallback
+### 8. Silent-video fallback
 
 相关文件：
 
@@ -245,7 +285,7 @@ def _write_frames(self) -> None:
 
 这样即使没有音频支持，也能保留可用于视觉检查的 baseline videos。
 
-### 8. tmux scheduler 和 GPU waiting
+### 9. tmux scheduler 和 GPU waiting
 
 相关文件：
 
@@ -287,7 +327,7 @@ RUNTIME_DIR="${RUNTIME_DIR:-$RUNTIME_ROOT/pianomime}"
 
 这样可以避免仿真和视频写入全部压在共享文件系统上。
 
-### 9. Artifact setup 和 Git hygiene
+### 10. Artifact setup 和 Git hygiene
 
 相关文件：
 

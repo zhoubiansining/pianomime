@@ -15,17 +15,19 @@ tmux automation for the Dexterous Piano Track baseline. Start here:
 - `docs/BASELINE_RESULTS_zh.md`
 - `docs/CODE_MODIFICATION_SUMMARY.md`
 - `docs/CODE_MODIFICATION_SUMMARY_zh.md`
+- `docs/CONFIGURATION.md`
+- `docs/CONFIGURATION_zh.md`
 - `docs/USAGE.md`
 - `docs/USAGE_zh.md`
 - `docs/PIPELINE_EVALUATION_zh.md`
 - `docs/EXPERIMENT_AUTOMATION.md`
 - `docs/4090_FEASIBILITY.md`
-- `docs/CODEX_HANDOFF_PROMPT.md`
 
 The reproduced baseline currently includes three training-set single-song
 videos, one `Petrunko_3` PPO F1 training curve, and seven unseen-song
 generalist diffusion evaluation videos. Exact paths and metrics are recorded in
-`docs/BASELINE_RESULTS.md`.
+`docs/BASELINE_RESULTS.md`. The course scripts read paths, task lists, and core
+baseline hyperparameters from `configs/baseline.toml`.
 
 The original PianoMime README continues below.
 

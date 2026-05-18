@@ -10,7 +10,8 @@ fi
 # Capture the argument
 ARGUMENT=$1
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PYTHON_BIN="${PYTHON_BIN:-python}"
+CONFIG_FILE="${CONFIG_FILE:-$PROJECT_ROOT/configs/baseline.toml}"
+eval "$("${CONFIG_PYTHON:-python3}" "$PROJECT_ROOT/scripts/config_export.py" "$CONFIG_FILE" paths environment)"
 GPU_ID="${CUDA_VISIBLE_DEVICES:-0}"
 EGL_DEVICE_ID="${MUJOCO_EGL_DEVICE_ID:-$GPU_ID}"
 
@@ -20,4 +21,4 @@ XLA_PYTHON_CLIENT_PREALLOCATE="${XLA_PYTHON_CLIENT_PREALLOCATE:-false}" \
 CUDA_VISIBLE_DEVICES="$GPU_ID" \
 MUJOCO_EGL_DEVICE_ID="$EGL_DEVICE_ID" \
 PYTHONPATH="$PROJECT_ROOT:${PYTHONPATH:-}" \
-"$PYTHON_BIN" "$PROJECT_ROOT/multi_task/eval_low_level.py" "$ARGUMENT"
+"$PYTHON_BIN" "$PROJECT_ROOT/multi_task/eval_low_level.py" "$ARGUMENT" --config "$CONFIG_FILE"

@@ -35,6 +35,18 @@ from stable_baselines3.common.monitor import Monitor
 import pickle
 import shutil
 
+def activation_from_name(name: str):
+    activations = {
+        "relu": torch.nn.ReLU,
+        "tanh": torch.nn.Tanh,
+        "gelu": torch.nn.GELU,
+        "elu": torch.nn.ELU,
+    }
+    key = name.lower()
+    if key not in activations:
+        raise ValueError(f"Unknown policy activation: {name}. Available: {sorted(activations)}")
+    return activations[key]
+
 
 def write_eval_metrics_header(path: Path) -> None:
     with path.open("w", newline="") as f:
@@ -150,6 +162,11 @@ class Args:
     lr_decay_rate: float = 0.99
     residual_factor: float = 0.02
     n_steps: int = 512
+    ppo_n_epochs: int = 10
+    ppo_batch_size: int = 1024
+    policy_activation: str = "gelu"
+    policy_pi_arch: Tuple[int, ...] = (1024, 256)
+    policy_vf_arch: Tuple[int, ...] = (1024, 256)
     use_note_trajectory: bool = False
     mimic_z_axis: bool = False
     disable_hand_collisions: bool = True
@@ -203,13 +220,15 @@ def main(args: Args) -> None:
     lr_scheduler_instance = lr_scheduler.LR_Scheduler(initial_lr=args.initial_lr,
                                                       decay_rate=args.lr_decay_rate,)
 
-    policy_kwargs = dict(activation_fn=torch.nn.GELU,
-                     net_arch=dict(pi=[1024, 256], vf=[1024, 256]))
+    policy_kwargs = dict(
+        activation_fn=activation_from_name(args.policy_activation),
+        net_arch=dict(pi=list(args.policy_pi_arch), vf=list(args.policy_vf_arch)),
+    )
     model = PPO("MlpPolicy", 
                 vec_env, 
-                n_epochs=10,
+                n_epochs=args.ppo_n_epochs,
                 n_steps=args.n_steps,
-                batch_size=1024,
+                batch_size=args.ppo_batch_size,
                 learning_rate=lr_scheduler_instance.lr_schedule,
                 policy_kwargs=policy_kwargs, 
                 verbose=2,

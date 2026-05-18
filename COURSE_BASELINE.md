@@ -1,6 +1,6 @@
 # Course Baseline Notes
 
-Last updated: 2026-05-18
+Last updated: 2026-05-19
 
 This fork is the course working copy for the Dexterous Piano Track. It keeps
 the original PianoMime baseline logic intact, while adding reproducibility
@@ -13,6 +13,8 @@ scripts, headless-server fixes, baseline result logging, and maintenance notes.
 - Chinese result index: `docs/BASELINE_RESULTS_zh.md`
 - Detailed code-change summary: `docs/CODE_MODIFICATION_SUMMARY.md`
 - Chinese code-change summary: `docs/CODE_MODIFICATION_SUMMARY_zh.md`
+- Configuration guide: `docs/CONFIGURATION.md`
+- Chinese configuration guide: `docs/CONFIGURATION_zh.md`
 - Usage and setup guide: `docs/USAGE.md`
 - Chinese usage guide: `docs/USAGE_zh.md`
 - Unattended tmux runner: `docs/EXPERIMENT_AUTOMATION.md`
@@ -94,6 +96,8 @@ The baseline reproduction required by the project PDF is complete:
 - A PPO F1 training curve is available.
 - 7 unseen-song generalist videos and metrics are available.
 - Experiments leave logs and reusable CSV files for later comparison.
+- Paths, task lists, and core baseline hyperparameters are centralized in
+  `configs/baseline.toml`; copy it for improvement experiments.
 
 The next research step is no longer baseline reproduction; it is implementing
 and evaluating improvement ideas against these recorded baseline numbers.

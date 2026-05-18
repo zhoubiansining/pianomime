@@ -10,12 +10,9 @@ TASK_NAME="$1"
 GPU_ID="$2"
 RUN_ID="${3:-manual_$(date +%Y%m%d_%H%M%S)}"
 
-SHARED_ROOT="${SHARED_ROOT:-/home/gaoj/share4/_piano}"
-RUNTIME_ROOT="${RUNTIME_ROOT:-/home/gaoj/piano_scratch}"
-RUNTIME_DIR="${RUNTIME_DIR:-$RUNTIME_ROOT/pianomime}"
-RESULTS_DIR="${RESULTS_DIR:-$SHARED_ROOT/baseline_results}"
-LOCAL_RESULTS_DIR="${LOCAL_RESULTS_DIR:-$RUNTIME_ROOT/baseline_results}"
-PYTHON_BIN="${PYTHON_BIN:-$SHARED_ROOT/.venv/bin/python}"
+SCRIPT_PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONFIG_FILE="${CONFIG_FILE:-$SCRIPT_PROJECT_DIR/configs/baseline.toml}"
+eval "$("${CONFIG_PYTHON:-python3}" "$SCRIPT_PROJECT_DIR/scripts/config_export.py" "$CONFIG_FILE" paths environment)"
 
 RUN_DIR="$RUNTIME_ROOT/runs/multisong_${TASK_NAME}_${RUN_ID}"
 HL_LOG="$LOCAL_RESULTS_DIR/multisong/logs/${TASK_NAME}_high_level.log"
@@ -55,7 +52,7 @@ mkdir -p "$RUN_DIR" "$TRAJ_DIR" \
 cd "$RUN_DIR"
 export CUDA_VISIBLE_DEVICES="$GPU_ID"
 export MUJOCO_EGL_DEVICE_ID="$GPU_ID"
-export MUJOCO_GL=egl
+export MUJOCO_GL="${MUJOCO_GL:-egl}"
 export PYTHONPATH="$RUNTIME_DIR"
 
 log "started"
@@ -64,12 +61,12 @@ if [[ -f "$TRAJ_DIR/${TASK_NAME}_left_hand_action_list.npy" && -f "$TRAJ_DIR/${T
   echo "Using existing high-level trajectories for $TASK_NAME" > "$HL_LOG"
 else
   log "running high-level diffusion"
-  "$PYTHON_BIN" "$RUNTIME_DIR/multi_task/eval_high_level.py" "$TASK_NAME" > "$HL_LOG" 2>&1
+  "$PYTHON_BIN" "$RUNTIME_DIR/multi_task/eval_high_level.py" "$TASK_NAME" --config "$CONFIG_FILE" > "$HL_LOG" 2>&1
 fi
 
 rm -f 00000.mp4 00001.mp4
 log "running low-level diffusion"
-"$PYTHON_BIN" "$RUNTIME_DIR/multi_task/eval_low_level.py" "$TASK_NAME" > "$LL_LOG" 2>&1
+"$PYTHON_BIN" "$RUNTIME_DIR/multi_task/eval_low_level.py" "$TASK_NAME" --config "$CONFIG_FILE" > "$LL_LOG" 2>&1
 
 if [[ -f 00001.mp4 ]]; then
   cp 00001.mp4 "$VIDEO"

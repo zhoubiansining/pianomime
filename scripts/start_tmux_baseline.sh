@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SHARED_ROOT="${SHARED_ROOT:-/home/gaoj/share4/_piano}"
-PROJECT_DIR="${PROJECT_DIR:-$SHARED_ROOT/pianomime}"
-SESSION="${SESSION:-pianomime_baseline}"
+SCRIPT_PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONFIG_FILE="${CONFIG_FILE:-$SCRIPT_PROJECT_DIR/configs/baseline.toml}"
+eval "$("${CONFIG_PYTHON:-python3}" "$SCRIPT_PROJECT_DIR/scripts/config_export.py" "$CONFIG_FILE" paths environment scheduler)"
+
 RUN_ID="${RUN_ID:-baseline_$(date +%Y%m%d)}"
-RESULTS_DIR="${RESULTS_DIR:-$SHARED_ROOT/baseline_results}"
+PROJECT_DIR="${PROJECT_DIR:-$SCRIPT_PROJECT_DIR}"
 LOG_DIR="$RESULTS_DIR/logs"
 LOG_FILE="$LOG_DIR/tmux_${RUN_ID}.log"
 
@@ -18,15 +19,12 @@ if tmux has-session -t "$SESSION" 2>/dev/null; then
 fi
 
 cmd=$(
-  printf 'cd %q && SHARED_ROOT=%q PROJECT_DIR=%q RUN_ID=%q RESULTS_DIR=%q GPU_IDS=%q GPU_FREE_MEM_MB=%q PPO_TOTAL_ITERS=%q bash scripts/baseline_scheduler.sh 2>&1 | tee -a %q' \
+  printf 'cd %q && CONFIG_FILE=%q RUN_ID=%q GPU_IDS=%q GPU_FREE_MEM_MB=%q bash scripts/baseline_scheduler.sh 2>&1 | tee -a %q' \
     "$PROJECT_DIR" \
-    "$SHARED_ROOT" \
-    "$PROJECT_DIR" \
+    "$CONFIG_FILE" \
     "$RUN_ID" \
-    "$RESULTS_DIR" \
     "${GPU_IDS:-}" \
     "${GPU_FREE_MEM_MB:-5000}" \
-    "${PPO_TOTAL_ITERS:-2000}" \
     "$LOG_FILE"
 )
 

@@ -1,15 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SHARED_ROOT="${SHARED_ROOT:-/home/gaoj/share4/_piano}"
-PROJECT_DIR="${PROJECT_DIR:-$SHARED_ROOT/pianomime}"
-ARTIFACT_CACHE="${ARTIFACT_CACHE:-$SHARED_ROOT/artifacts}"
-PYTHON_BIN="${PYTHON_BIN:-$SHARED_ROOT/.venv/bin/python}"
-
-DATASET_ID="1X8q-PvqyqL2X15wCZevTfAtSDfiHpYAa"
-CHECKPOINT_ID="1-wa1UAn_mbPN87D6GIi4PS0VNDE5mbQh"
-DATASET_ZIP="$ARTIFACT_CACHE/pianomime_dataset_download"
-CHECKPOINT_ZIP="$ARTIFACT_CACHE/pianomime_checkpoints_download"
+SCRIPT_PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONFIG_FILE="${CONFIG_FILE:-$SCRIPT_PROJECT_DIR/configs/baseline.toml}"
+eval "$("${CONFIG_PYTHON:-python3}" "$SCRIPT_PROJECT_DIR/scripts/config_export.py" "$CONFIG_FILE" paths artifacts)"
 
 log() {
   printf '[%(%F %T)T] %s\n' -1 "$*"

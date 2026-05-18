@@ -25,6 +25,25 @@ For the already reproduced baseline metrics, videos, and training curve, read
 `docs/BASELINE_RESULTS.md` first. Do not rerun completed baseline jobs unless
 you are validating a new environment.
 
+## Configuration
+
+The default configuration file is:
+
+```text
+configs/baseline.toml
+```
+
+It centralizes paths, artifacts, scheduler defaults, single-song replay, PPO
+residual training, and generalist high-level/low-level evaluation parameters.
+For new experiments, copy it and run with `CONFIG_FILE`:
+
+```bash
+cp configs/baseline.toml configs/my_method.toml
+CONFIG_FILE=configs/my_method.toml bash scripts/run_multisong_task.sh Alone_1 0
+```
+
+See `docs/CONFIGURATION.md` for details.
+
 ## Environment
 
 Use the existing environment if it is present:
@@ -77,29 +96,22 @@ checks that CUDA allocation works and that the project imports in headless mode.
 
 ## Manual Baseline Commands
 
+Prefer these script entrypoints; they read `CONFIG_FILE` and export the needed
+runtime environment.
+
 Single-song action replay:
 
 ```bash
-cd /home/gaoj/piano_scratch/runs/single_Stan_1
-export PYTHONPATH=/home/gaoj/piano_scratch/pianomime:/home/gaoj/piano_scratch/pianomime/single_task
-export CUDA_VISIBLE_DEVICES=0 MUJOCO_EGL_DEVICE_ID=0 MUJOCO_GL=egl
-/home/gaoj/share4/_piano/.venv/bin/python \
-  /home/gaoj/piano_scratch/pianomime/single_task/test_trained_actions.py Stan_1
+bash scripts/test_trained_actions.sh Stan_1
 ```
 
 Generalist diffusion baseline:
 
 ```bash
-cd /home/gaoj/piano_scratch/runs/multisong_Alone_1
-export PYTHONPATH=/home/gaoj/piano_scratch/pianomime
-export CUDA_VISIBLE_DEVICES=0 MUJOCO_EGL_DEVICE_ID=0 MUJOCO_GL=egl
-/home/gaoj/share4/_piano/.venv/bin/python \
-  /home/gaoj/piano_scratch/pianomime/multi_task/eval_high_level.py Alone_1
-/home/gaoj/share4/_piano/.venv/bin/python \
-  /home/gaoj/piano_scratch/pianomime/multi_task/eval_low_level.py Alone_1
+bash scripts/run_multisong_task.sh Alone_1 0
 ```
 
-PPO residual baseline uses the original task hyperparameters through:
+PPO residual baseline:
 
 ```bash
 bash scripts/run_ppo.sh Petrunko_3

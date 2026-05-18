@@ -1,6 +1,6 @@
 # Code Modification Summary
 
-Last updated: 2026-05-18
+Last updated: 2026-05-19
 
 This document records the engineering changes made to make the PianoMime
 baseline reproducible on the course server. The intent was to preserve the
@@ -13,10 +13,10 @@ The following baseline semantics were intentionally kept unchanged:
 
 - No reward terms were redesigned.
 - No model architecture was changed.
-- No diffusion checkpoint, PPO policy architecture, or task definition was
-  modified.
-- Core baseline hyperparameters such as diffusion horizons, residual factor,
-  wrapper order, frame stack, and control timestep were preserved.
+- No diffusion checkpoint or task definition was modified.
+- The default PPO policy architecture and core baseline hyperparameters remain
+  unchanged; the defaults are now centralized in `configs/baseline.toml` for
+  future copied experiment configs.
 
 Most edits are path handling, dependency tolerance, logging, automation, and
 runtime stability improvements.
@@ -29,13 +29,55 @@ runtime stability improvements.
 | Multi-task utilities | `multi_task/utils.py` | Lazy environment imports, repo-relative dataset lookup, CPU/GPU-safe encoder device use, `torch.no_grad()` in eval observation encoding. |
 | Single-song PPO training | `single_task/train_ppo.py` | Persistent evaluation CSV, F1 curve image, safer reruns, optional pretrained resume, final-rollout guard. |
 | Single-song replay | `single_task/test_trained_actions.py`, `single_task/utils.py` | Repo-relative dataset/action loading and lighter startup validation. |
+| Central config | `configs/baseline.toml`, `pianomime_config.py`, `scripts/config_export.py`, `scripts/run_ppo_from_config.py` | Centralized paths, task lists, scheduler defaults, and single-song/generalist baseline hyperparameters in TOML. |
 | Audio/video robustness | `robopianist/wrappers/sound.py` | Audio dependencies are optional at runtime; missing FluidSynth/PortAudio no longer prevents silent video generation. |
 | Automation scripts | `scripts/*.sh`, especially `baseline_scheduler.sh`, `start_tmux_baseline.sh`, `sync_to_runtime.sh`, `run_multisong_task.sh` | tmux execution, GPU waiting/locking, scratch-directory execution, result syncing, rerunnable tasks. |
 | Setup/release docs | `README.md`, `COURSE_BASELINE.md`, `docs/*.md`, `.gitignore`, `requirements.txt` | Added course documentation, artifact setup, result index, code audit, and ignored large generated/downloaded artifacts. |
 
 ## Representative Changes
 
-### 1. Repo-root path handling
+### 1. Central config
+
+Files:
+
+```text
+configs/baseline.toml
+pianomime_config.py
+scripts/config_export.py
+scripts/run_ppo_from_config.py
+scripts/baseline_scheduler.sh
+scripts/run_ppo.sh
+single_task/train_ppo.py
+single_task/test_trained_actions.py
+multi_task/eval_high_level.py
+multi_task/eval_low_level.py
+```
+
+Baseline paths, task lists, and core hyperparameters now come from
+`configs/baseline.toml`:
+
+```toml
+[single_song.ppo]
+total_iters = 2000
+residual_factor = 0.03
+ppo_batch_size = 1024
+policy_activation = "gelu"
+policy_pi_arch = [1024, 256]
+policy_vf_arch = [1024, 256]
+```
+
+Entry scripts use the same config loader:
+
+```python
+cfg = load_config(args.config)
+ppo = dict(section(cfg, "single_song", "ppo"))
+command.extend(cli_args_from_mapping(ppo))
+```
+
+Future methods can copy a config rather than chasing defaults across shell and
+Python files.
+
+### 2. Repo-root path handling
 
 Files:
 
@@ -72,7 +114,7 @@ left_hand_action_list = np.load(
 This makes the scripts usable from tmux run directories under local scratch,
 instead of requiring the user to manually `cd` into one specific folder.
 
-### 2. CPU/GPU-safe model loading
+### 3. CPU/GPU-safe model loading
 
 Files:
 
@@ -109,7 +151,7 @@ with torch.no_grad():
 This prevents CPU-only fallback from crashing and avoids building unnecessary
 autograd graphs during evaluation.
 
-### 3. Lazy environment imports
+### 4. Lazy environment imports
 
 File:
 
@@ -134,7 +176,7 @@ def _env_deps():
 This makes lightweight imports and invalid-argument checks faster and less
 fragile on headless servers.
 
-### 4. Train/test note trajectory lookup
+### 5. Train/test note trajectory lookup
 
 File:
 
@@ -157,7 +199,7 @@ def _load_note_trajectory(task_name):
 This is important for unseen-song evaluation, where test songs live in
 `dataset/notes_test`.
 
-### 5. PPO training metrics and F1 curve
+### 6. PPO training metrics and F1 curve
 
 File:
 
@@ -197,7 +239,7 @@ eval_metrics.csv
 eval_f1_curve.png
 ```
 
-### 6. Safer PPO reruns and interruption behavior
+### 7. Safer PPO reruns and interruption behavior
 
 Files:
 
@@ -233,7 +275,7 @@ if not checkpoint_path.with_suffix(".zip").exists():
     return
 ```
 
-### 7. Silent-video fallback
+### 8. Silent-video fallback
 
 File:
 
@@ -260,7 +302,7 @@ def _write_frames(self) -> None:
 
 This keeps visual baseline videos available even without audio support.
 
-### 8. tmux scheduler and GPU waiting
+### 9. tmux scheduler and GPU waiting
 
 Files:
 
@@ -303,7 +345,7 @@ RUNTIME_DIR="${RUNTIME_DIR:-$RUNTIME_ROOT/pianomime}"
 
 This avoids excessive simulation/video I/O on the shared filesystem.
 
-### 9. Artifact setup and Git hygiene
+### 10. Artifact setup and Git hygiene
 
 Files:
 

@@ -1,6 +1,6 @@
 # PianoMime Baseline Plan and Status
 
-Last updated: 2026-05-18
+Last updated: 2026-05-19
 
 ## Course Requirement Extract
 
@@ -36,6 +36,8 @@ Completed items:
 - Result documentation is now centralized in `docs/BASELINE_RESULTS.md`.
 - Code modification documentation is now centralized in
   `docs/CODE_MODIFICATION_SUMMARY.md`.
+- Paths, task lists, scheduler defaults, and core baseline hyperparameters are
+  centralized in `configs/baseline.toml`; see `docs/CONFIGURATION.md`.
 
 ## Result Locations
 
@@ -65,6 +67,8 @@ experiments, with the following notes:
   committed.
 - Large artifacts are intentionally ignored and restored through
   `scripts/setup_artifacts.sh`.
+- Use `configs/baseline.toml` for reproduction; copy it for new methods so the
+  baseline config stays untouched.
 - Long runs should use `scripts/start_tmux_baseline.sh` and local scratch
   execution to reduce shared-filesystem stalls.
 - The current server has verified A800 runs. A 4090 smoke script exists, but a

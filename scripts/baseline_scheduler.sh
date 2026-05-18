@@ -1,20 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SHARED_ROOT="${SHARED_ROOT:-/home/gaoj/share4/_piano}"
-PROJECT_DIR="${PROJECT_DIR:-$SHARED_ROOT/pianomime}"
-RUNTIME_ROOT="${RUNTIME_ROOT:-/home/gaoj/piano_scratch}"
-RUNTIME_DIR="${RUNTIME_DIR:-$RUNTIME_ROOT/pianomime}"
-VENV="${VENV:-$SHARED_ROOT/.venv}"
-PYTHON_BIN="${PYTHON_BIN:-$VENV/bin/python}"
-RESULTS_DIR="${RESULTS_DIR:-$SHARED_ROOT/baseline_results}"
-LOCAL_RESULTS_DIR="${LOCAL_RESULTS_DIR:-$RUNTIME_ROOT/baseline_results}"
+SCRIPT_PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONFIG_FILE="${CONFIG_FILE:-$SCRIPT_PROJECT_DIR/configs/baseline.toml}"
+eval "$("${CONFIG_PYTHON:-python3}" "$SCRIPT_PROJECT_DIR/scripts/config_export.py" "$CONFIG_FILE" paths environment scheduler)"
+
 RUN_ID="${RUN_ID:-baseline_$(date +%Y%m%d)}"
-GPU_FREE_MEM_MB="${GPU_FREE_MEM_MB:-5000}"
-POLL_SECONDS="${POLL_SECONDS:-60}"
-SINGLE_REPLAY_TASKS="${SINGLE_REPLAY_TASKS-Stan_1 Petrunko_3 NeverGonnaGiveYouUp_1}"
-MULTISONG_TASKS="${MULTISONG_TASKS-Alone_1 Numb_1 NoTimeToDie_1}"
-PPO_TASKS="${PPO_TASKS-Petrunko_3}"
+PROJECT_DIR="${PROJECT_DIR:-$SCRIPT_PROJECT_DIR}"
 
 if [[ -z "${GPU_IDS:-}" ]]; then
   GPU_IDS="$(nvidia-smi --query-gpu=index --format=csv,noheader,nounits | tr '\n' ' ')"
@@ -183,7 +175,7 @@ run_single_replay() {
     cd "$run_dir"
     export CUDA_VISIBLE_DEVICES="$gpu" MUJOCO_EGL_DEVICE_ID="$gpu" MUJOCO_GL=egl
     export PYTHONPATH="$RUNTIME_DIR:$RUNTIME_DIR/single_task"
-    "$PYTHON_BIN" "$RUNTIME_DIR/single_task/test_trained_actions.py" "$song" > "$log_file" 2>&1
+    "$PYTHON_BIN" "$RUNTIME_DIR/single_task/test_trained_actions.py" "$song" --config "$CONFIG_FILE" > "$log_file" 2>&1
     copy_latest_video "$video"
   )
   record_single_metrics "$song" "$log_file"
@@ -218,10 +210,10 @@ run_multisong_eval() {
     if [[ -f "$left_traj" && -f "$right_traj" ]]; then
       echo "Using existing high-level trajectories for $song" > "$hl_log"
     else
-      "$PYTHON_BIN" "$RUNTIME_DIR/multi_task/eval_high_level.py" "$song" > "$hl_log" 2>&1
+      "$PYTHON_BIN" "$RUNTIME_DIR/multi_task/eval_high_level.py" "$song" --config "$CONFIG_FILE" > "$hl_log" 2>&1
     fi
     rm -f 00000.mp4 00001.mp4
-    "$PYTHON_BIN" "$RUNTIME_DIR/multi_task/eval_low_level.py" "$song" > "$ll_log" 2>&1
+    "$PYTHON_BIN" "$RUNTIME_DIR/multi_task/eval_low_level.py" "$song" --config "$CONFIG_FILE" > "$ll_log" 2>&1
     copy_latest_video "$video"
   )
   rsync -a "$RUNTIME_DIR/multi_task/trajectories/" "$PROJECT_DIR/multi_task/trajectories/" 2>/dev/null || true
@@ -260,35 +252,10 @@ run_ppo_training() {
     export CUDA_VISIBLE_DEVICES="$gpu" MUJOCO_EGL_DEVICE_ID="$gpu" MUJOCO_GL=egl
     export PYTHONPATH="$RUNTIME_DIR:$RUNTIME_DIR/single_task"
     export WANDB_MODE=disabled
-    "$PYTHON_BIN" "$RUNTIME_DIR/single_task/train_ppo.py" \
+    "$PYTHON_BIN" "$RUNTIME_DIR/scripts/run_ppo_from_config.py" "$song" \
+      --config "$CONFIG_FILE" \
       --root-dir "$LOCAL_RESULTS_DIR/single_song/training_runs" \
-      --name "$run_name" \
-      --warmstart-steps 5000 \
-      --max-steps 1000000 \
-      --discount 0.99 \
-      --trim-silence \
-      --gravity-compensation \
-      --control-timestep 0.05 \
-      --n-steps-lookahead 0 \
-      --disable_fingering_reward \
-      --disable_hand_collisions \
-      --disable_forearm_reward \
-      --tqdm-bar \
-      --eval-episodes 1 \
-      --camera-id "piano/back" \
-      --midi-start-from 0 \
-      --residual-action \
-      --frame-stack 4 \
-      --num-envs 1 \
-      --initial-lr 3e-4 \
-      --lr-decay-rate 0.999 \
-      --n-steps 512 \
-      --mimic-task "$song" \
-      --environment-name "$song" \
-      --use-note-trajectory \
-      --total-iters "${PPO_TOTAL_ITERS:-2000}" \
-      --residual-factor 0.03 \
-      --deepmimic \
+      --run-name "$run_name" \
       "${maybe_pretrained[@]}" > "$log_file" 2>&1
   )
   rsync -a "$run_dir/robopianist_rl" "$experiment_dir/" 2>/dev/null || true

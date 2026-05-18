@@ -1,6 +1,6 @@
 # PianoMime Baseline 计划和状态
 
-最后更新：2026-05-18
+最后更新：2026-05-19
 
 Dexterous Piano Track PDF 要求的 baseline reproduction 已经完成。
 
@@ -31,6 +31,7 @@ PDF baseline 要求已经完成。
 - 已完成 7 首 unseen-song generalist diffusion checkpoint evaluations：`Alone_1`、`Numb_1`、`NoTimeToDie_1`、`Forester_1`、`EyesClosed_1`、`Paradise_1`、`SomewhereOnlyWeKnow_1`。
 - 结果文档集中在 `docs/BASELINE_RESULTS_zh.md`。
 - 代码修改文档集中在 `docs/CODE_MODIFICATION_SUMMARY_zh.md`。
+- 路径、任务列表、scheduler 默认值和核心 baseline 超参数已集中到 `configs/baseline.toml`，配置说明见 `docs/CONFIGURATION_zh.md`。
 
 ## 结果位置
 
@@ -57,6 +58,7 @@ multisong/logs/
 
 - 当前 worktree 是 Git repository，后续 push 到 GitHub 前应保持 clean。
 - 大型 artifacts 被 `.gitignore` 忽略，并通过 `scripts/setup_artifacts.sh` 恢复。
+- 复现 baseline 时使用 `configs/baseline.toml`；后续新方法建议复制新配置再改，避免污染 baseline。
 - 长实验应使用 `scripts/start_tmux_baseline.sh` 和 local scratch execution，减少共享文件系统卡顿。
 - 当前服务器上的 A800 run 已验证。4090 有 smoke script，但本机未看到 4090，因此尚未物理验证。
 

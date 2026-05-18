@@ -1,6 +1,6 @@
 # 课程 Baseline 说明
 
-最后更新：2026-05-18
+最后更新：2026-05-19
 
 这是 Dexterous Piano Track 的课程工作版本。当前仓库尽量保持原始 PianoMime baseline 的算法逻辑不变，同时补充了可复现脚本、无显示服务器上的运行修复、baseline 结果记录和维护说明。
 
@@ -9,6 +9,7 @@
 - 完整 baseline 结果索引：`docs/BASELINE_RESULTS_zh.md`
 - 代码修改详细说明：`docs/CODE_MODIFICATION_SUMMARY_zh.md`
 - 使用和环境配置说明：`docs/USAGE_zh.md`
+- 集中配置说明：`docs/CONFIGURATION_zh.md`
 - tmux 自动实验说明：`docs/EXPERIMENT_AUTOMATION_zh.md`
 - 当前问题和注意事项：`docs/problems_zh.md`
 - 进度和完成状态：`docs/planning_zh.md`
@@ -80,6 +81,7 @@ Generalist diffusion checkpoint baseline：
 - 已有一条 PPO F1 training curve。
 - 已有 7 首 unseen-song generalist 的视频和指标。
 - 实验留下了日志和可复用的 CSV 文件，便于后续和改进方法对比。
+- 路径、曲目列表和核心 baseline 超参数已集中到 `configs/baseline.toml`，同学可以复制新配置来做改进实验。
 
 下一步研究工作不再是 baseline 复现，而是基于这些 baseline 数字实现和评估改进方法。
 

@@ -30,6 +30,12 @@ GPU_IDS="0 1 2" bash scripts/start_tmux_baseline.sh
 
 如果省略 `GPU_IDS`，scheduler 会查询所有可见 GPU，并等待某张卡的显存占用低于 `GPU_FREE_MEM_MB`。默认阈值是 `5000` MiB。
 
+默认任务列表、GPU 等待阈值、路径和核心 baseline 超参来自 `configs/baseline.toml`。如果要使用另一份配置：
+
+```bash
+CONFIG_FILE=configs/my_method.toml GPU_IDS="0 1 2" bash scripts/start_tmux_baseline.sh
+```
+
 ## 进入、退出和日志
 
 进入 tmux：
@@ -87,7 +93,7 @@ Scheduler 设计为可以重复运行：
 
 ## 默认任务集合
 
-Scheduler 默认运行：
+Scheduler 默认任务集合在 `configs/baseline.toml` 中维护：
 
 ```text
 SINGLE_REPLAY_TASKS="Stan_1 Petrunko_3 NeverGonnaGiveYouUp_1"
@@ -101,7 +107,7 @@ PPO_TASKS="Petrunko_3"
 Forester_1 EyesClosed_1 Paradise_1 SomewhereOnlyWeKnow_1
 ```
 
-可以通过环境变量覆盖任务集合：
+可以通过环境变量临时覆盖任务集合：
 
 ```bash
 MULTISONG_TASKS="Numb_1 NoTimeToDie_1" PPO_TASKS="Petrunko_3" \
