@@ -10,9 +10,14 @@ This working copy adds course reproducibility docs, headless-server fixes, and
 tmux automation for the Dexterous Piano Track baseline. Start here:
 
 - `COURSE_BASELINE.md`
+- `COURSE_BASELINE_zh.md`
 - `docs/BASELINE_RESULTS.md`
+- `docs/BASELINE_RESULTS_zh.md`
 - `docs/CODE_MODIFICATION_SUMMARY.md`
+- `docs/CODE_MODIFICATION_SUMMARY_zh.md`
 - `docs/USAGE.md`
+- `docs/USAGE_zh.md`
+- `docs/PIPELINE_EVALUATION_zh.md`
 - `docs/EXPERIMENT_AUTOMATION.md`
 - `docs/4090_FEASIBILITY.md`
 - `docs/CODEX_HANDOFF_PROMPT.md`

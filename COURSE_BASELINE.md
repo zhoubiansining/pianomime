@@ -8,12 +8,19 @@ scripts, headless-server fixes, baseline result logging, and maintenance notes.
 
 ## Start Here
 
+- Chinese overview: `COURSE_BASELINE_zh.md`
 - Full reproduced result index: `docs/BASELINE_RESULTS.md`
+- Chinese result index: `docs/BASELINE_RESULTS_zh.md`
 - Detailed code-change summary: `docs/CODE_MODIFICATION_SUMMARY.md`
+- Chinese code-change summary: `docs/CODE_MODIFICATION_SUMMARY_zh.md`
 - Usage and setup guide: `docs/USAGE.md`
+- Chinese usage guide: `docs/USAGE_zh.md`
 - Unattended tmux runner: `docs/EXPERIMENT_AUTOMATION.md`
+- Chinese tmux runner guide: `docs/EXPERIMENT_AUTOMATION_zh.md`
 - Current caveats: `docs/problems.md`
+- Chinese caveats: `docs/problems_zh.md`
 - Planning / completion status: `docs/planning.md`
+- Chinese pipeline evaluation: `docs/PIPELINE_EVALUATION_zh.md`
 
 ## Code Paths
 
