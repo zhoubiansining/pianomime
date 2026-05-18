@@ -32,4 +32,9 @@ if [[ "${DRY_RUN:-0}" == "1" ]]; then
   extra_args+=(--dry-run)
 fi
 
-"$PYTHON_BIN" "$PROJECT_ROOT/scripts/run_ppo_from_config.py" "$SONG" --config "$CONFIG_FILE" "${extra_args[@]}"
+RUNNER_PYTHON="$PYTHON_BIN"
+if [[ "${DRY_RUN:-0}" == "1" && ! -x "$RUNNER_PYTHON" ]]; then
+  RUNNER_PYTHON="${CONFIG_PYTHON:-python3}"
+fi
+
+"$RUNNER_PYTHON" "$PROJECT_ROOT/scripts/run_ppo_from_config.py" "$SONG" --config "$CONFIG_FILE" "${extra_args[@]}"
