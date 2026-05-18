@@ -141,8 +141,9 @@ diffusion/PPO hyperparameters, or policy architectures.
   - `docs/USAGE.md`
   - `docs/EXPERIMENT_AUTOMATION.md`
   - `docs/4090_FEASIBILITY.md`
-  - `docs/GITHUB_RELEASE.md`
-  - `docs/CODEX_HANDOFF_PROMPT.md`
+  - `docs/CONFIGURATION.md`
+  - `docs/BASELINE_RESULTS.md`
+  - `docs/CODE_MODIFICATION_SUMMARY.md`
 - Added automation scripts:
   - `scripts/setup_python_env.sh`
   - `scripts/setup_artifacts.sh`

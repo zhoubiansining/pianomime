@@ -354,7 +354,8 @@ scripts/setup_artifacts.sh
 scripts/setup_python_env.sh
 .gitignore
 requirements.txt
-docs/GITHUB_RELEASE.md
+docs/CONFIGURATION.md
+docs/USAGE.md
 ```
 
 Large generated or downloaded files are intentionally ignored:

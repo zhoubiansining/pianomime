@@ -21,7 +21,6 @@ scripts, headless-server fixes, baseline result logging, and maintenance notes.
 - Chinese tmux runner guide: `docs/EXPERIMENT_AUTOMATION_zh.md`
 - Current caveats: `docs/problems.md`
 - Chinese caveats: `docs/problems_zh.md`
-- Planning / completion status: `docs/planning.md`
 - Chinese pipeline evaluation: `docs/PIPELINE_EVALUATION_zh.md`
 
 ## Code Paths

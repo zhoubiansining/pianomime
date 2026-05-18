@@ -36,7 +36,7 @@
 9. 共享文件系统在长实验中可能卡住。
    - 已通过从 `/home/gaoj/piano_scratch/pianomime` 运行，并把最终结果同步回 `/home/gaoj/share4/_piano/baseline_results` 缓解。
 
-10. 断开 VSCode/Codex 后实验可能停止。
+10. 断开 VSCode 或终端后实验可能停止。
     - 已通过 tmux automation 和可重复运行的 scheduler 逻辑缓解。
 
 ## 仍需注意

@@ -336,7 +336,8 @@ scripts/setup_artifacts.sh
 scripts/setup_python_env.sh
 .gitignore
 requirements.txt
-docs/GITHUB_RELEASE.md
+docs/CONFIGURATION_zh.md
+docs/USAGE_zh.md
 ```
 
 大型下载和生成文件会被 Git 忽略：

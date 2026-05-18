@@ -12,7 +12,6 @@
 - 集中配置说明：`docs/CONFIGURATION_zh.md`
 - tmux 自动实验说明：`docs/EXPERIMENT_AUTOMATION_zh.md`
 - 当前问题和注意事项：`docs/problems_zh.md`
-- 进度和完成状态：`docs/planning_zh.md`
 - pipeline 能力评估：`docs/PIPELINE_EVALUATION_zh.md`
 
 ## 代码路径
