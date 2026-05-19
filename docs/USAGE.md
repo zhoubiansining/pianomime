@@ -84,6 +84,9 @@ The script reuses cached zips from `/home/gaoj/share4/_piano/artifacts` when
 available. It downloads from the original PianoMime Google Drive links only if
 the cache is missing.
 
+The repository already tracks `dataset_hl.zarr` and `dataset_ll.zarr`, so the
+generalist multi-song baseline does not need any extra post-clone asset copy.
+
 ## Smoke Checks
 
 ```bash

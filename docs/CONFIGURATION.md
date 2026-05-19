@@ -37,6 +37,7 @@ CONFIG_FILE=configs/my_method.toml bash scripts/run_ppo.sh Petrunko_3
 `configs/baseline.toml` supports:
 
 ```text
+{home}
 {project_root}
 {project_parent}
 {shared_root}
@@ -45,6 +46,10 @@ CONFIG_FILE=configs/my_method.toml bash scripts/run_ppo.sh Petrunko_3
 {results_dir}
 {local_results_dir}
 ```
+
+The default baseline config uses `{home}/piano_scratch` for local runtime
+execution, so a fresh clone can reuse the same scripts under a different
+username without editing the file immediately.
 
 For new experiments, copy the baseline config instead of editing it directly:
 

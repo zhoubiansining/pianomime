@@ -9,11 +9,9 @@ __pycache__/
 venv/
 env/
 
-# Large PianoMime artifacts are reproducible/downloadable and should not be
+# Large PianoMime artifacts that are still restored by scripts and should not be
 # committed to GitHub.
 dataset/
-dataset_hl.zarr/
-dataset_ll.zarr/
 checkpoint_*.ckpt
 artifacts/
 

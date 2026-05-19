@@ -20,6 +20,8 @@ LL_LOG="$LOCAL_RESULTS_DIR/multisong/logs/${TASK_NAME}_low_level.log"
 VIDEO="$LOCAL_RESULTS_DIR/multisong/videos/${TASK_NAME}_multisong_baseline.mp4"
 METRICS="$LOCAL_RESULTS_DIR/multisong/metrics.csv"
 TRAJ_DIR="$RUNTIME_DIR/multi_task/trajectories"
+HL_ZARR="$RUNTIME_DIR/dataset_hl.zarr"
+LL_ZARR="$RUNTIME_DIR/dataset_ll.zarr"
 
 log() {
   printf '[%(%F %T)T] [%s:g%s] %s\n' -1 "$TASK_NAME" "$GPU_ID" "$*"
@@ -48,6 +50,15 @@ record_metrics() {
 mkdir -p "$RUN_DIR" "$TRAJ_DIR" \
   "$LOCAL_RESULTS_DIR/multisong/logs" \
   "$LOCAL_RESULTS_DIR/multisong/videos"
+
+"$SCRIPT_PROJECT_DIR/scripts/sync_to_runtime.sh" >/dev/null
+mkdir -p "$TRAJ_DIR"
+
+if [[ ! -d "$HL_ZARR" || ! -d "$LL_ZARR" ]]; then
+  echo "Missing dataset_hl.zarr or dataset_ll.zarr under $RUNTIME_DIR." >&2
+  echo "Run scripts/setup_artifacts.sh and, if needed, provide ZARR_SOURCE_DIR=/path/to/prebuilt_zarrs." >&2
+  exit 2
+fi
 
 cd "$RUN_DIR"
 export CUDA_VISIBLE_DEVICES="$GPU_ID"

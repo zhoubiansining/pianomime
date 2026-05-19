@@ -5,6 +5,7 @@ SCRIPT_PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG_FILE="${CONFIG_FILE:-$SCRIPT_PROJECT_DIR/configs/baseline.toml}"
 eval "$("${CONFIG_PYTHON:-python3}" "$SCRIPT_PROJECT_DIR/scripts/config_export.py" "$CONFIG_FILE" paths)"
 PYTHON="${PYTHON:-python3}"
+export PIP_DEFAULT_TIMEOUT="${PIP_DEFAULT_TIMEOUT:-60}"
 
 log() {
   printf '[%(%F %T)T] %s\n' -1 "$*"
@@ -19,7 +20,7 @@ fi
 
 # shellcheck source=/dev/null
 source "$VENV/bin/activate"
-python -m pip install --upgrade pip setuptools wheel
+python -m pip install --upgrade pip "setuptools<81" wheel
 
 if ! python - <<'PY' >/dev/null 2>&1
 import torch

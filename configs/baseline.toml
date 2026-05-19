@@ -1,6 +1,7 @@
 # Central configuration for the course PianoMime baseline pipeline.
 #
 # Paths support these placeholders:
+#   {home}           current user's home directory
 #   {project_root}   repository root
 #   {project_parent} parent directory of the repository
 #   {shared_root}, {runtime_root}, {venv}, {results_dir}, {local_results_dir}
@@ -12,7 +13,7 @@ venv = "{shared_root}/.venv"
 python_bin = "{venv}/bin/python"
 results_dir = "{shared_root}/baseline_results"
 artifact_cache = "{shared_root}/artifacts"
-runtime_root = "/home/gaoj/piano_scratch"
+runtime_root = "{home}/piano_scratch"
 runtime_dir = "{runtime_root}/pianomime"
 local_results_dir = "{runtime_root}/baseline_results"
 

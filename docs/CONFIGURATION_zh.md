@@ -36,6 +36,7 @@ CONFIG_FILE=configs/my_method.toml bash scripts/run_ppo.sh Petrunko_3
 `configs/baseline.toml` 支持以下占位符：
 
 ```text
+{home}             当前用户的 home 目录
 {project_root}     当前仓库根目录
 {project_parent}   当前仓库父目录
 {shared_root}      [paths.shared_root]
@@ -44,6 +45,8 @@ CONFIG_FILE=configs/my_method.toml bash scripts/run_ppo.sh Petrunko_3
 {results_dir}      [paths.results_dir]
 {local_results_dir} [paths.local_results_dir]
 ```
+
+默认 baseline 配置把本地 runtime 目录写成 `{home}/piano_scratch`，这样即使换了用户名或机器，fresh clone 也更容易直接复用同一套脚本。
 
 默认情况下，如果仓库位于 `/home/gaoj/share4/_piano/pianomime`，配置会展开为：
 

@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SHARED_ROOT="${SHARED_ROOT:-/home/gaoj/share4/_piano}"
-PROJECT_DIR="${PROJECT_DIR:-$SHARED_ROOT/pianomime}"
-VENV="${VENV:-$SHARED_ROOT/.venv}"
-PYTHON_BIN="${PYTHON_BIN:-$VENV/bin/python}"
+SCRIPT_PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONFIG_FILE="${CONFIG_FILE:-$SCRIPT_PROJECT_DIR/configs/baseline.toml}"
+eval "$("${CONFIG_PYTHON:-python3}" "$SCRIPT_PROJECT_DIR/scripts/config_export.py" "$CONFIG_FILE" paths environment)"
 
 export PYTHONPATH="$PROJECT_DIR:${PYTHONPATH:-}"
 export MUJOCO_GL="${MUJOCO_GL:-egl}"

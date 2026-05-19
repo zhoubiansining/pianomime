@@ -45,6 +45,7 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
 
     paths = dict(cfg.get("paths", {}))
     context = {
+        "home": str(Path.home()),
         "project_root": str(PROJECT_ROOT),
         "project_parent": str(PROJECT_ROOT.parent),
     }

@@ -143,7 +143,6 @@ class Args:
     disable_fingering_reward: bool = False
     disable_forearm_reward: bool = False
     disable_colorization: bool = False
-    disable_hand_collisions: bool = False
     primitive_fingertip_collisions: bool = False
     frame_stack: int = 1
     clip: bool = True

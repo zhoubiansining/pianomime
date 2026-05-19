@@ -76,6 +76,8 @@ bash scripts/setup_artifacts.sh
 
 脚本会优先复用 `/home/gaoj/share4/_piano/artifacts` 里的缓存 zip。只有缓存不存在时才会从原始 PianoMime Google Drive 链接下载。
 
+仓库里已经包含 `dataset_hl.zarr` 和 `dataset_ll.zarr`，所以 generalist multi-song baseline 不再需要额外从共享目录补拷这两个数据目录。
+
 ## Smoke Check
 
 ```bash

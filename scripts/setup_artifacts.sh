@@ -9,6 +9,21 @@ log() {
   printf '[%(%F %T)T] %s\n' -1 "$*"
 }
 
+copy_optional_zarr() {
+  local source_root="${ZARR_SOURCE_DIR:-}"
+  if [[ -z "$source_root" ]]; then
+    return 0
+  fi
+  if [[ -d "$source_root/dataset_hl.zarr" && -d "$source_root/dataset_ll.zarr" ]]; then
+    log "Copying prebuilt zarr datasets from $source_root"
+    rsync -a "$source_root/dataset_hl.zarr" "$PROJECT_DIR/"
+    rsync -a "$source_root/dataset_ll.zarr" "$PROJECT_DIR/"
+    return 0
+  fi
+  echo "ZARR_SOURCE_DIR is set but does not contain dataset_hl.zarr and dataset_ll.zarr: $source_root" >&2
+  return 1
+}
+
 download_drive_file() {
   local file_id="$1"
   local output="$2"
@@ -29,7 +44,7 @@ PY
   fi
 
   log "Downloading Google Drive file $file_id -> $output"
-  "$PYTHON_BIN" -m gdown --fuzzy "https://drive.google.com/file/d/${file_id}/view?usp=sharing" -O "$output"
+  "$PYTHON_BIN" -m gdown "https://drive.google.com/uc?id=${file_id}" -O "$output"
 }
 
 extract_zip() {
@@ -59,6 +74,12 @@ if [[ ! -f "$PROJECT_DIR/checkpoint_high_level.ckpt" || ! -f "$PROJECT_DIR/check
   extract_zip "$CHECKPOINT_ZIP"
 else
   log "Checkpoint files already exist"
+fi
+
+copy_optional_zarr
+if [[ ! -d "$PROJECT_DIR/dataset_hl.zarr" || ! -d "$PROJECT_DIR/dataset_ll.zarr" ]]; then
+  log "Prebuilt zarr datasets are missing. Single-song replay can run, but generalist multi-task evaluation also needs dataset_hl.zarr and dataset_ll.zarr at the repository root."
+  log "If you already have them elsewhere, rerun with: ZARR_SOURCE_DIR=/path/to/zarr_bundle bash scripts/setup_artifacts.sh"
 fi
 
 log "Artifacts ready under $PROJECT_DIR"
