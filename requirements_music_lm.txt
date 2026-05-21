@@ -1,0 +1,7 @@
+# Lightweight environment for MAESTRO tokenization and small GPT pretraining.
+# The full PianoMime baseline environment is still defined in requirements.txt.
+numpy==1.26.4
+tqdm==4.66.1
+torch>=2.1
+note-seq==0.0.5
+pretty_midi==0.2.10

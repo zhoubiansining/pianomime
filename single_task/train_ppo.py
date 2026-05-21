@@ -172,6 +172,11 @@ class Args:
     rsi: bool = False
     curriculum: bool = False
     total_iters: int = 1000
+    music_lm_checkpoint: Optional[Path] = None
+    music_lm_reward_weight: float = 0.0
+    music_lm_reward_window_tokens: int = 256
+    music_lm_reward_clip: float = 5.0
+    music_lm_reference_log_ppl: Optional[float] = None
 
 def prefix_dict(prefix: str, d: dict) -> dict:
     return {f"{prefix}/{k}": v for k, v in d.items()}

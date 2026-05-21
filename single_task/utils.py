@@ -33,6 +33,22 @@ def _load_note_trajectory(task_name):
     with (PROJECT_ROOT / "dataset" / "notes" / f"{task_name}.pkl").open("rb") as f:
         return pickle.load(f)
 
+
+def _maybe_add_music_lm_reward(env, args):
+    checkpoint = getattr(args, "music_lm_checkpoint", None)
+    if checkpoint in (None, ""):
+        return env
+    from music_lm.reward import MusicPPLRewardWrapper
+
+    return MusicPPLRewardWrapper(
+        environment=env,
+        checkpoint_path=checkpoint,
+        reward_weight=float(getattr(args, "music_lm_reward_weight", 0.0)),
+        window_tokens=int(getattr(args, "music_lm_reward_window_tokens", 256)),
+        reward_clip=float(getattr(args, "music_lm_reward_clip", 5.0)),
+        reference_log_ppl=getattr(args, "music_lm_reference_log_ppl", None),
+    )
+
 def get_env_no_residual(args, record_dir: Optional[Path] = None):
     left_hand_action_list = np.load(
         PROJECT_ROOT / "dataset" / "high_level_trajectories" / f"{args.mimic_task}_left_hand_action_list.npy"
@@ -82,6 +98,7 @@ def get_env_no_residual(args, record_dir: Optional[Path] = None):
             mimic_z_axis=args.mimic_z_axis,
             n_steps_lookahead=args.n_steps_lookahead,
         )
+    env = _maybe_add_music_lm_reward(env, args)
     if record_dir is not None:
         env = robopianist_wrappers.PianoSoundVideoWrapper(
             environment=env,
@@ -181,6 +198,7 @@ def get_env(args, record_dir: Optional[Path] = None):
             demo_ctrl_timestep=args.control_timestep,
             rsi=args.rsi,
         )
+    env = _maybe_add_music_lm_reward(env, args)
     if record_dir is not None:
         env = robopianist_wrappers.PianoSoundVideoWrapper(
             environment=env,
@@ -264,6 +282,7 @@ def get_env_multitask(args, task_names, record_dir: Optional[Path] = None):
     env = composer_utils.Environment(
         recompile_physics=False, task=task, strip_singleton_obs_buffer_dim=True
     )
+    env = _maybe_add_music_lm_reward(env, args)
     # print(env.observation_spec())
     if record_dir is not None:
         env = robopianist_wrappers.PianoSoundVideoWrapper(

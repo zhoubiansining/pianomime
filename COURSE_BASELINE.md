@@ -19,6 +19,8 @@ scripts, headless-server fixes, baseline result logging, and maintenance notes.
 - Chinese usage guide: `docs/USAGE_zh.md`
 - Unattended tmux runner: `docs/EXPERIMENT_AUTOMATION.md`
 - Chinese tmux runner guide: `docs/EXPERIMENT_AUTOMATION_zh.md`
+- MAESTRO small GPT / PPL reward: `docs/MUSIC_LM.md`
+- Chinese MAESTRO small GPT / PPL reward: `docs/MUSIC_LM_zh.md`
 - Current caveats: `docs/problems.md`
 - Chinese caveats: `docs/problems_zh.md`
 - Chinese pipeline evaluation: `docs/PIPELINE_EVALUATION_zh.md`

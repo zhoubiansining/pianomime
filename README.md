@@ -88,6 +88,7 @@ These steps are the recommended handoff path for course teammates.
 - Usage details: `docs/USAGE.md`, `docs/USAGE_zh.md`
 - Config details: `docs/CONFIGURATION.md`, `docs/CONFIGURATION_zh.md`
 - tmux automation: `docs/EXPERIMENT_AUTOMATION.md`, `docs/EXPERIMENT_AUTOMATION_zh.md`
+- MAESTRO small GPT / PPL reward: `docs/MUSIC_LM.md`, `docs/MUSIC_LM_zh.md`
 - Current caveats: `docs/problems.md`, `docs/problems_zh.md`
 
 ### Scope Notes

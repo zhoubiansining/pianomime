@@ -1,0 +1,133 @@
+# MAESTRO Music LM 与 PPL Reward
+
+本文档说明如何把 MAESTRO 钢琴 MIDI 预训练成一个小 GPT，并把得到的
+perplexity 作为 PianoMime/RoboPianist 的 evaluation metric 或 PPO 辅助 reward。
+
+## 可行性判断
+
+这个方向可行，但建议先作为 evaluation metric 使用，再作为低权重 reward 做消融。
+
+优点：
+
+- MAESTRO 是纯钢琴演奏数据，和 RoboPianist/PianoMime 的输出域匹配。
+- MIDI-only 版本足够训练 next-token prediction，不需要处理音频。
+- PPL 能补充 F1 看不到的错误，例如 ghost notes、局部乱序、奇怪节奏和不自然 sustain。
+- 当前仓库的仿真环境已经能通过 `piano.midi_module` 记录机器人实际触发的 MIDI events，因此可以直接 score 机器人演奏。
+
+主要风险：
+
+- PPL 衡量“像 MAESTRO 训练分布”，不等价于“弹对目标曲子”。它不能替代目标 MIDI 的 precision/recall/F1。
+- 作为 reward 时，模型可能偏好常见古典片段而不是当前目标曲。建议 reward 写成辅助项，并保留原始 note-level reward。
+- 如果只用全局 PPL，训练信号会很稀疏。当前实现用 sliding-window log-PPL，在机器人产生新 MIDI event 时才加一个有界 bonus。
+- MAESTRO 授权是非商业共享协议；课程研究通常没问题，公开发布模型时要标注数据来源和许可。
+
+## 数据准备
+
+本仓库已经提供脚本化入口。先创建专用 virtualenv：
+
+```bash
+bash scripts/setup_music_lm_env.sh
+```
+
+下载并 tokenize MAESTRO v3.0.0 MIDI-only：
+
+```bash
+bash scripts/prepare_music_lm_data.sh
+```
+
+如果需要重新下载，使用：
+
+```bash
+DOWNLOAD=1 bash scripts/prepare_music_lm_data.sh
+```
+
+默认路径来自 `configs/baseline.toml` 的 `[music_lm]` 段：
+
+```text
+artifacts/maestro
+artifacts/maestro_tokens
+artifacts/music_lm/small_gpt
+```
+
+快速 smoke test 可以限制每个 split 的曲目数：
+
+```bash
+LIMIT_PER_SPLIT=2 bash scripts/prepare_music_lm_data.sh
+```
+
+tokenizer 是事件流格式：
+
+- `TIME_SHIFT_k`
+- `VELOCITY_k`
+- `NOTE_ON_pitch`
+- `NOTE_OFF_pitch`
+- `SUSTAIN_ON`
+- `SUSTAIN_OFF`
+
+默认时间量化为 10 ms，最大单 token time shift 为 1 s，超出时重复多个
+time-shift token。
+
+## 训练小 GPT
+
+```bash
+bash scripts/train_music_lm.sh
+```
+
+临时覆盖训练步数或设备：
+
+```bash
+MAX_STEPS=1000 DEVICE=cpu bash scripts/train_music_lm.sh
+```
+
+产物：
+
+```text
+artifacts/music_lm/small_gpt/
+  best.pt
+  latest.pt
+  train_log.jsonl
+```
+
+`best.pt` 会保存模型权重、GPT config 和 tokenizer config。
+
+## 作为 evaluation metric
+
+对任意 MIDI 文件打分：
+
+```bash
+bash scripts/eval_music_lm.sh tutorial/Stan_1.mid
+```
+
+输出包含：
+
+- `tokens`
+- `log_ppl`
+- `ppl`
+
+建议报告 `log_ppl`，因为它比原始 PPL 更稳定，也更适合做 reward。
+
+## 作为 PPO 辅助 reward
+
+`single_task/train_ppo.py` 已加入可选参数，默认不开启。启用示例：
+
+```bash
+bash scripts/run_ppo_with_music_lm.sh Petrunko_3
+```
+
+wrapper 的 reward 形式是：
+
+```text
+bonus = -weight * (window_log_ppl - reference_log_ppl)
+```
+
+如果没有设置 `reference_log_ppl`，默认中心值为 0；实际实验中更推荐先用
+目标 MIDI 的 `log_ppl` 或 baseline rollout 的 `log_ppl` 作为 reference，让 bonus
+只奖励“比参考更自然”的局部片段。
+
+## 推荐实验顺序
+
+1. 只训练 music LM，并在 MAESTRO validation/test 上确认 validation PPL 下降。
+2. 对目标 MIDI、single-song replay 生成的 MIDI、失败 rollout MIDI 分别打分，检查 PPL 是否符合直觉。
+3. 把 PPL 作为 evaluation metric 加入结果表，不改变 PPO reward。
+4. 以很小权重加入 PPO reward，例如 `0.001`、`0.003`、`0.01`，和原 baseline 对比 F1 与 PPL。
+5. 如果 F1 下降但 PPL 上升，说明模型在奖励“像古典音乐”而不是“弹对目标曲”，需要降低权重或改成只惩罚明显异常 event。

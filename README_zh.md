@@ -79,6 +79,7 @@
 - 使用说明：`docs/USAGE.md`、`docs/USAGE_zh.md`
 - 配置说明：`docs/CONFIGURATION.md`、`docs/CONFIGURATION_zh.md`
 - tmux 自动化：`docs/EXPERIMENT_AUTOMATION.md`、`docs/EXPERIMENT_AUTOMATION_zh.md`
+- MAESTRO 小 GPT / PPL reward：`docs/MUSIC_LM.md`、`docs/MUSIC_LM_zh.md`
 - 当前已知注意事项：`docs/problems.md`、`docs/problems_zh.md`
 
 ### 范围说明

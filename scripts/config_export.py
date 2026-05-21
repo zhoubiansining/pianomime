@@ -65,11 +65,43 @@ def emit_artifacts(cfg: dict) -> list[str]:
     ]
 
 
+def emit_music_lm(cfg: dict) -> list[str]:
+    music_lm = section(cfg, "music_lm")
+    return [
+        shell_default("MUSIC_LM_MAESTRO_ROOT", music_lm.get("maestro_root")),
+        shell_default("MUSIC_LM_TOKENS_DIR", music_lm.get("maestro_tokens_dir")),
+        shell_default("MUSIC_LM_OUTPUT_DIR", music_lm.get("output_dir")),
+        shell_default("MUSIC_LM_CHECKPOINT", music_lm.get("checkpoint")),
+        shell_default("MUSIC_LM_VENV", music_lm.get("venv")),
+        shell_default("MUSIC_LM_PYTHON_BIN", music_lm.get("python_bin")),
+        shell_default("MUSIC_LM_TIME_STEP_SECONDS", music_lm.get("time_step_seconds")),
+        shell_default("MUSIC_LM_MAX_TIME_SHIFT_STEPS", music_lm.get("max_time_shift_steps")),
+        shell_default("MUSIC_LM_VELOCITY_BINS", music_lm.get("velocity_bins")),
+        shell_default("MUSIC_LM_BLOCK_SIZE", music_lm.get("block_size")),
+        shell_default("MUSIC_LM_BATCH_SIZE", music_lm.get("batch_size")),
+        shell_default("MUSIC_LM_N_LAYER", music_lm.get("n_layer")),
+        shell_default("MUSIC_LM_N_HEAD", music_lm.get("n_head")),
+        shell_default("MUSIC_LM_N_EMBD", music_lm.get("n_embd")),
+        shell_default("MUSIC_LM_DROPOUT", music_lm.get("dropout")),
+        shell_default("MUSIC_LM_LEARNING_RATE", music_lm.get("learning_rate")),
+        shell_default("MUSIC_LM_WEIGHT_DECAY", music_lm.get("weight_decay")),
+        shell_default("MUSIC_LM_MAX_STEPS", music_lm.get("max_steps")),
+        shell_default("MUSIC_LM_EVAL_INTERVAL", music_lm.get("eval_interval")),
+        shell_default("MUSIC_LM_EVAL_ITERS", music_lm.get("eval_iters")),
+        shell_default("MUSIC_LM_GRAD_CLIP", music_lm.get("grad_clip")),
+        shell_default("MUSIC_LM_SEED", music_lm.get("seed")),
+        shell_default("MUSIC_LM_PPO_REWARD_WEIGHT", music_lm.get("ppo_reward_weight")),
+        shell_default("MUSIC_LM_PPO_REWARD_WINDOW_TOKENS", music_lm.get("ppo_reward_window_tokens")),
+        shell_default("MUSIC_LM_PPO_REWARD_CLIP", music_lm.get("ppo_reward_clip")),
+    ]
+
+
 EMITTERS = {
     "paths": emit_paths,
     "environment": emit_environment,
     "scheduler": emit_scheduler,
     "artifacts": emit_artifacts,
+    "music_lm": emit_music_lm,
 }
 
 

@@ -20,6 +20,11 @@ def main() -> None:
     parser.add_argument("--run-name", default=None)
     parser.add_argument("--root-dir", default=None)
     parser.add_argument("--pretrained", default=None)
+    parser.add_argument("--music-lm-checkpoint", default=None)
+    parser.add_argument("--music-lm-reward-weight", type=float, default=None)
+    parser.add_argument("--music-lm-reward-window-tokens", type=int, default=None)
+    parser.add_argument("--music-lm-reward-clip", type=float, default=None)
+    parser.add_argument("--music-lm-reference-log-ppl", type=float, default=None)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -51,6 +56,16 @@ def main() -> None:
     ]
     if args.pretrained:
         command.extend(["--pretrained", args.pretrained])
+    if args.music_lm_checkpoint:
+        command.extend(["--music-lm-checkpoint", args.music_lm_checkpoint])
+    if args.music_lm_reward_weight is not None:
+        command.extend(["--music-lm-reward-weight", str(args.music_lm_reward_weight)])
+    if args.music_lm_reward_window_tokens is not None:
+        command.extend(["--music-lm-reward-window-tokens", str(args.music_lm_reward_window_tokens)])
+    if args.music_lm_reward_clip is not None:
+        command.extend(["--music-lm-reward-clip", str(args.music_lm_reward_clip)])
+    if args.music_lm_reference_log_ppl is not None:
+        command.extend(["--music-lm-reference-log-ppl", str(args.music_lm_reference_log_ppl)])
     for handled_key in ("root_dir", "name", "mimic_task", "environment_name", "pretrained"):
         ppo.pop(handled_key, None)
     command.extend(cli_args_from_mapping(ppo))

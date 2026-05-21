@@ -11,6 +11,7 @@
 - 使用和环境配置说明：`docs/USAGE_zh.md`
 - 集中配置说明：`docs/CONFIGURATION_zh.md`
 - tmux 自动实验说明：`docs/EXPERIMENT_AUTOMATION_zh.md`
+- MAESTRO 小 GPT / PPL reward 说明：`docs/MUSIC_LM_zh.md`
 - 当前问题和注意事项：`docs/problems_zh.md`
 - pipeline 能力评估：`docs/PIPELINE_EVALUATION_zh.md`
 
