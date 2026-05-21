@@ -1,7 +1,11 @@
 import sys
-directory = 'pianomime'
-if directory not in sys.path:
-    sys.path.append(directory)
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from goal_auto_encoder import transformer as goal_transformer
 import torch; torch.manual_seed(0)
 import torch.nn as nn
 import torch.nn.functional as F
@@ -182,12 +186,12 @@ class TransformerEncoder(nn.Module):
         self.horizon = horizon
         self.input_dim = input_dim
         self.cond_dim = cond_dim
-        self.encoder = vae.transformer.Decoder(
-                        embedding=vae.transformer.Embeddings(input_dim, 16),
-                        positional_encoding=vae.transformer.PositionalEncoding(16, 0.1),
-                        layer=vae.transformer.DecoderLayer(16, 
-                                                 vae.transformer.MultiHeadedAttention(4, 16), 
-                                                 vae.transformer.PositionwiseFeedForward(16, 128), 0.1), 
+        self.encoder = goal_transformer.Decoder(
+                        embedding=goal_transformer.Embeddings(input_dim, 16),
+                        positional_encoding=goal_transformer.PositionalEncoding(16, 0.1),
+                        layer=goal_transformer.DecoderLayer(16,
+                                                 goal_transformer.MultiHeadedAttention(4, 16),
+                                                 goal_transformer.PositionwiseFeedForward(16, 128), 0.1),
                         N=4)
         self.fc_mu = nn.Linear(input_dim+cond_dim, latent_dim)
         self.fc_var = nn.Linear(input_dim+cond_dim, latent_dim)

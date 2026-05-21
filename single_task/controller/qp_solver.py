@@ -2,7 +2,6 @@ import numpy as np
 import collections
 from absl import logging
 from dm_control.mujoco.wrapper import mjbindings
-import numpy as np
 import qpsolvers
 
 mjlib = mjbindings.mjlib

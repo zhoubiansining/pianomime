@@ -1,8 +1,10 @@
 import sys
-directory = 'pianomime'
-if directory not in sys.path:
-    sys.path.append(directory)
 from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from typing import Optional, Tuple
 import tyro
 from dataclasses import dataclass, asdict
@@ -13,7 +15,8 @@ import numpy as np
 from tqdm import tqdm
 import torch
 from copy import copy
-from dataclasses import dataclass, replace
+from dataclasses import replace
+import csv
 
 import logging_callback
 import lr_scheduler
@@ -31,6 +34,82 @@ from stable_baselines3.common.monitor import Monitor
 
 import pickle
 import shutil
+
+def activation_from_name(name: str):
+    activations = {
+        "relu": torch.nn.ReLU,
+        "tanh": torch.nn.Tanh,
+        "gelu": torch.nn.GELU,
+        "elu": torch.nn.ELU,
+    }
+    key = name.lower()
+    if key not in activations:
+        raise ValueError(f"Unknown policy activation: {name}. Available: {sorted(activations)}")
+    return activations[key]
+
+
+def write_eval_metrics_header(path: Path) -> None:
+    with path.open("w", newline="") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "iteration",
+                "env_steps",
+                "precision",
+                "recall",
+                "f1",
+                "sustain_precision",
+                "sustain_recall",
+                "sustain_f1",
+            ],
+        )
+        writer.writeheader()
+
+
+def append_eval_metrics(path: Path, iteration: int, env_steps: int, metrics: dict) -> None:
+    row = {
+        "iteration": iteration,
+        "env_steps": env_steps,
+        "precision": metrics.get("precision"),
+        "recall": metrics.get("recall"),
+        "f1": metrics.get("f1"),
+        "sustain_precision": metrics.get("sustain_precision"),
+        "sustain_recall": metrics.get("sustain_recall"),
+        "sustain_f1": metrics.get("sustain_f1"),
+    }
+    with path.open("a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(row))
+        writer.writerow(row)
+
+
+def maybe_plot_f1_curve(metrics_path: Path, output_path: Path) -> None:
+    try:
+        import matplotlib.pyplot as plt
+    except Exception as exc:
+        print(f"Skipping F1 curve plot because matplotlib is unavailable: {exc}")
+        return
+
+    env_steps = []
+    f1s = []
+    with metrics_path.open(newline="") as f:
+        for row in csv.DictReader(f):
+            if row["f1"] in ("", "None"):
+                continue
+            env_steps.append(int(row["env_steps"]))
+            f1s.append(float(row["f1"]))
+
+    if not f1s:
+        return
+
+    plt.figure(figsize=(7, 4))
+    plt.plot(env_steps, f1s, marker="o", linewidth=2)
+    plt.xlabel("Environment steps")
+    plt.ylabel("F1")
+    plt.title("PPO Evaluation F1")
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=160)
+    plt.close()
 
 
 @dataclass(frozen=True)
@@ -64,7 +143,6 @@ class Args:
     disable_fingering_reward: bool = False
     disable_forearm_reward: bool = False
     disable_colorization: bool = False
-    disable_hand_collisions: bool = False
     primitive_fingertip_collisions: bool = False
     frame_stack: int = 1
     clip: bool = True
@@ -83,6 +161,11 @@ class Args:
     lr_decay_rate: float = 0.99
     residual_factor: float = 0.02
     n_steps: int = 512
+    ppo_n_epochs: int = 10
+    ppo_batch_size: int = 1024
+    policy_activation: str = "gelu"
+    policy_pi_arch: Tuple[int, ...] = (1024, 256)
+    policy_vf_arch: Tuple[int, ...] = (1024, 256)
     use_note_trajectory: bool = False
     mimic_z_axis: bool = False
     disable_hand_collisions: bool = True
@@ -101,7 +184,16 @@ def main(args: Args) -> None:
 
     # Create experiment directory.
     experiment_dir = Path(args.root_dir) / run_name
-    experiment_dir.mkdir(parents=True)
+    experiment_dir.mkdir(parents=True, exist_ok=True)
+    metrics_path = experiment_dir / "eval_metrics.csv"
+    f1_curve_path = experiment_dir / "eval_f1_curve.png"
+    if not metrics_path.exists():
+        write_eval_metrics_header(metrics_path)
+    checkpoint_dir = Path("./robopianist_rl/ckpts")
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    checkpoint_path = checkpoint_dir / f"{run_name}_best"
+    trained_song_dir = Path("./trained_songs") / args.mimic_task
+    trained_song_dir.mkdir(parents=True, exist_ok=True)
 
     # Seed RNGs.
     random.seed(args.seed)
@@ -127,13 +219,15 @@ def main(args: Args) -> None:
     lr_scheduler_instance = lr_scheduler.LR_Scheduler(initial_lr=args.initial_lr,
                                                       decay_rate=args.lr_decay_rate,)
 
-    policy_kwargs = dict(activation_fn=torch.nn.GELU,
-                     net_arch=dict(pi=[1024, 256], vf=[1024, 256]))
+    policy_kwargs = dict(
+        activation_fn=activation_from_name(args.policy_activation),
+        net_arch=dict(pi=list(args.policy_pi_arch), vf=list(args.policy_vf_arch)),
+    )
     model = PPO("MlpPolicy", 
                 vec_env, 
-                n_epochs=10,
+                n_epochs=args.ppo_n_epochs,
                 n_steps=args.n_steps,
-                batch_size=1024,
+                batch_size=args.ppo_batch_size,
                 learning_rate=lr_scheduler_instance.lr_schedule,
                 policy_kwargs=policy_kwargs, 
                 verbose=2,
@@ -161,25 +255,40 @@ def main(args: Args) -> None:
                     break
             log_dict = prefix_dict("eval", eval_env.env.get_statistics())
             music_dict = prefix_dict("eval", eval_env.env.get_musical_metrics())
+            metrics = eval_env.env.get_musical_metrics()
+            append_eval_metrics(
+                path=metrics_path,
+                iteration=i,
+                env_steps=(i + 1) * args.n_steps * args.num_envs,
+                metrics=metrics,
+            )
             # wandb.log(log_dict | music_dict, step=i)
             # if args.deepmimic:
                 # wandb.log(prefix_dict("eval", eval_env.env.get_deepmimic_rews()), step=i)
-            f1 = eval_env.env.get_musical_metrics()["f1"]
+            f1 = metrics["f1"]
             if f1 > best_f1:
-                print("best_f1:{}->{}".format(best_f1, eval_env.env.get_musical_metrics()["f1"]))
-                best_f1 = eval_env.env.get_musical_metrics()["f1"]
-                model.save("./robopianist_rl/ckpts/{}_best".format(run_name))
+                print("best_f1:{}->{}".format(best_f1, metrics["f1"]))
+                best_f1 = metrics["f1"]
+                model.save(checkpoint_path)
                 # video = wandb.Video(str(eval_env.env.latest_filename), fps=4, format="mp4")
                 # wandb.log({"video": video, "global_step": i})
             
-            eval_env.env.latest_filename.unlink()  
+            latest_filename = getattr(eval_env.env, "latest_filename", None)
+            if latest_filename is not None and Path(latest_filename).exists():
+                Path(latest_filename).unlink()
     except KeyboardInterrupt:
         pass
+    finally:
+        maybe_plot_f1_curve(metrics_path, f1_curve_path)
 
     # model.save("./robopianist_rl/ckpts/{}".format(run_name))
 
     # Evaluate the trained model
-    model = PPO.load("./robopianist_rl/ckpts/{}_best".format(run_name), env=vec_env)
+    if not checkpoint_path.with_suffix(".zip").exists():
+        print(f"No checkpoint produced at {checkpoint_path.with_suffix('.zip')}; skip final rollout.")
+        return
+
+    model = PPO.load(checkpoint_path, env=vec_env)
 
     obs, _ = eval_env.reset()
     actions = []
@@ -195,7 +304,7 @@ def main(args: Args) -> None:
     print(eval_env.env.latest_filename)
     print(eval_env.env.get_musical_metrics())
     actions = np.array(actions)
-    np.save("./trained_songs/{}/actions_{}".format(args.mimic_task, args.mimic_task), actions)
+    np.save(trained_song_dir / f"actions_{args.mimic_task}", actions)
 
     del model # remove to demonstrate saving and loading
 

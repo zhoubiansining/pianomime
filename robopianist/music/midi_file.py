@@ -31,7 +31,6 @@ from note_seq import NoteSequence, midi_io, midi_synth, music_pb2, sequences_lib
 from note_seq import constants as ns_constants
 
 from robopianist import SF2_PATH
-from robopianist.music import audio
 from robopianist.music import constants as consts
 from robopianist.music.piano_roll import sequence_to_pianoroll
 
@@ -244,6 +243,8 @@ class MidiFile:
 
     def play(self, sampling_rate: int = consts.SAMPLING_RATE) -> None:
         """Play the MIDI file using FluidSynth and PyAudio."""
+        from robopianist.music import audio
+
         waveform_float = self.synthesize()
         normalizer = float(np.iinfo(np.int16).max)
         waveform = np.array(np.asarray(waveform_float) * normalizer, dtype=np.int16)

@@ -1,53 +1,56 @@
 import sys
-directory = 'pianomime'
-if directory not in sys.path:
-    sys.path.append(directory)
-from network import ConditionalUnet1D, EMAModel, ConvEncoder, VariationalConvMlpEncoder
-import torch
-import math
-from typing import Tuple, Sequence, Dict, Union, Optional
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+import argparse
 import numpy as np
-import math
 import torch
-import torch.nn as nn
-import collections
-import zarr
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
-from diffusers.training_utils import EMAModel
-from diffusers.optimization import get_scheduler
 from tqdm.auto import tqdm
-from dataset import RoboPianistDataset, read_dataset, normalize_data, unnormalize_data, read_dataset_split
+from dataset import read_dataset, normalize_data, unnormalize_data
 import goal_auto_encoder.network
-import network
-from utils import get_env_hl, get_diffusion_obs, get_flattend_obs, get_goal_only_obs, adjust_ft_fingering
-import os
+from network import ConditionalUnet1D, VariationalConvMlpEncoder
+from utils import get_env_hl, get_flattend_obs, adjust_ft_fingering
+from pianomime_config import DEFAULT_CONFIG_PATH, load_config, section
 
 CTRL_TIMESTEP = 0.05
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("song_name")
+    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
-    pred_horizon = 4
-    action_horizon = 1
-    obs_horizon = 1
+    args = parse_args()
+    config = load_config(args.config)
+    paths = section(config, "paths")
+    hl_config = section(config, "multisong", "high_level")
 
-    obs_dim = 212
-    action_dim = 36
+    pred_horizon = int(hl_config.get("pred_horizon", 4))
+    action_horizon = int(hl_config.get("action_horizon", 1))
+    obs_horizon = int(hl_config.get("obs_horizon", 1))
 
-    midi_channel = 16
-    midi_dim = 212
+    obs_dim = int(hl_config.get("obs_dim", 212))
+    action_dim = int(hl_config.get("action_dim", 36))
 
-    noise = 0.01
-    num_seeds = 1
-    task_name = sys.argv[1]
-
+    midi_channel = int(hl_config.get("midi_channel", 16))
+    num_seeds = int(hl_config.get("num_seeds", 1))
+    task_name = args.song_name
 
     for seed in range(num_seeds):
         # Set seed
-        torch.manual_seed(seed)
-        np.random.seed(seed)
+        current_seed = int(hl_config.get("seed", 0)) + seed
+        torch.manual_seed(current_seed)
+        np.random.seed(current_seed)
 
-        dataset_path = "pianomime/dataset_hl.zarr"
+        dataset_path = str(Path(paths.get("project_dir", PROJECT_ROOT)) / "dataset_hl.zarr")
 
-        device = torch.device('cuda')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         # create dataloader
         dataloader, stats = read_dataset(pred_horizon=pred_horizon,
@@ -57,22 +60,23 @@ if __name__ == '__main__':
                                 normalization=True)
 
         ae = goal_auto_encoder.network.Autoencoder(
-            latent_dim=16,
-            cond_dim=64,
-        ).to('cuda')
+            latent_dim=int(hl_config.get("ae_latent_dim", 16)),
+            cond_dim=int(hl_config.get("ae_cond_dim", 64)),
+        ).to(device)
 
-        ckpt_path = "checkpoint_ae.ckpt"
-        state_dict = torch.load(ckpt_path, map_location='cuda')
+        ckpt_path = Path(paths.get("project_dir", PROJECT_ROOT)) / "checkpoint_ae.ckpt"
+        state_dict = torch.load(ckpt_path, map_location=device)
         ae.load_state_dict(state_dict)
         encoder = ae.encoder
 
-        def create_midi_encoder(device='cuda'):
+        def create_midi_encoder(device=device):
             midi_encoder = VariationalConvMlpEncoder(
-                in_channels=16,
-                mid_channels=32,
-                out_channels=64,
-                latent_dim=32,
-                noise=0.08,
+                in_channels=int(hl_config.get("midi_encoder_in_channels", 16)),
+                mid_channels=int(hl_config.get("midi_encoder_mid_channels", 32)),
+                out_channels=int(hl_config.get("midi_encoder_out_channels", 64)),
+                latent_dim=int(hl_config.get("midi_encoder_latent_dim", 32)),
+                device=device,
+                noise=float(hl_config.get("midi_encoder_noise", 0.08)),
             ).to(device)
             return midi_encoder
 
@@ -85,29 +89,20 @@ if __name__ == '__main__':
             midi_encoder=create_midi_encoder,
         ).to(device)
 
-        ckpt_path = "checkpoint_high_level.ckpt"
-        state_dict = torch.load(ckpt_path, map_location='cuda')
+        ckpt_path = Path(paths.get("project_dir", PROJECT_ROOT)) / "checkpoint_high_level.ckpt"
+        state_dict = torch.load(ckpt_path, map_location=device)
         ema_noise_pred_net = noise_pred_net
         ema_noise_pred_net.load_state_dict(state_dict)
-        num_epochs = 3200
-
-        # Exponential Moving Average
-        # accelerates training and improves stability
-        # holds a copy of the model weights
-        ema = EMAModel(
-            model=noise_pred_net,
-            power=0.75)
-
-        num_diffusion_iters = 100
+        num_diffusion_iters = int(hl_config.get("diffusion_iters", 100))
         noise_scheduler = DDPMScheduler(
             num_train_timesteps=num_diffusion_iters,
             # the choise of beta schedule has big impact on performance
             # we found squared cosine works the best
-            beta_schedule='squaredcos_cap_v2',
+            beta_schedule=str(hl_config.get("beta_schedule", 'squaredcos_cap_v2')),
             # clip output to [-1,1] to improve stability
-            clip_sample=True,
+            clip_sample=bool(hl_config.get("clip_sample", True)),
             # our network predicts noise (instead of denoised action)
-            prediction_type='epsilon'
+            prediction_type=str(hl_config.get("prediction_type", 'epsilon'))
         ) 
         # task_names = os.listdir('trained_songs')
         num_songs = 1
@@ -115,7 +110,20 @@ if __name__ == '__main__':
         for i in range(num_songs):
             print(task_name)
 
-            env, max_steps = get_env_hl(task_name, lookahead=10)
+            lookahead = int(hl_config.get("lookahead", 10))
+            env, max_steps = get_env_hl(
+                task_name,
+                lookahead=lookahead,
+                control_timestep=float(hl_config.get("control_timestep", 0.05)),
+                disable_hand_collisions=bool(hl_config.get("disable_hand_collisions", True)),
+                disable_forearm_reward=bool(hl_config.get("disable_forearm_reward", True)),
+                disable_fingering_reward=bool(hl_config.get("disable_fingering_reward", False)),
+                midi_start_from=int(hl_config.get("midi_start_from", 0)),
+                gravity_compensation=bool(hl_config.get("gravity_compensation", True)),
+                residual_factor=float(hl_config.get("residual_factor", 1)),
+                shift=int(hl_config.get("shift", 0)),
+                clip=bool(hl_config.get("clip", True)),
+            )
             trajectory_lh = np.zeros((max_steps, 3, 6))
             trajectory_rh = np.zeros((max_steps, 3, 6))
             trajectory = []
@@ -137,7 +145,7 @@ if __name__ == '__main__':
                 while not timestep.last():
                     cont = np.zeros((4, midi_channel+action_dim))
                     goal = get_flattend_obs(timestep, 
-                                    lookahead=10,
+                                    lookahead=lookahead,
                                     exclude_keys=[
                                                 'fingering', 
                                                 'hand', 
@@ -211,11 +219,11 @@ if __name__ == '__main__':
                     timestep = env.step(np.zeros(47))
                     pbar.update(1)
 
-            if not os.path.exists("pianomime/multi_task/trajectories"):
-                os.makedirs("pianomime/multi_task/trajectories")
+            trajectories_dir = PROJECT_ROOT / "multi_task" / "trajectories"
+            trajectories_dir.mkdir(parents=True, exist_ok=True)
             # Save the trajectory
-            np.save("pianomime/multi_task/trajectories/{}_trajectory.npy".format(task_name), trajectory)
-            np.save("pianomime/multi_task/trajectories/{}_left_hand_action_list.npy".format(task_name), trajectory_lh)
-            np.save("pianomime/multi_task/trajectories/{}_right_hand_action_list.npy".format(task_name), trajectory_rh)
+            np.save(trajectories_dir / f"{task_name}_trajectory.npy", trajectory)
+            np.save(trajectories_dir / f"{task_name}_left_hand_action_list.npy", trajectory_lh)
+            np.save(trajectories_dir / f"{task_name}_right_hand_action_list.npy", trajectory_rh)
 
             # Release the VideoCapture and VideoWriter objects

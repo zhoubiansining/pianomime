@@ -14,14 +14,11 @@ import lr_scheduler
 
 import os
 
-import orbax.checkpoint
-from flax.training import orbax_utils
-
 import dm_env_wrappers as wrappers
 
 import robopianist.wrappers as robopianist_wrappers
 import wrappers as pianomime_wrappers
-# from robopianist.suite.tasks import piano_with_shadow_hands, piano_with_shadow_hands_multitask
+from robopianist.suite.tasks import piano_with_shadow_hands, piano_with_shadow_hands_multitask
 import piano_with_shadow_hands_res
 from robopianist import music
 from mujoco_utils import composer_utils
@@ -29,42 +26,48 @@ import gymnasium as gym
 import pickle
 from stable_baselines3.common.utils import set_random_seed
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _load_note_trajectory(task_name):
+    with (PROJECT_ROOT / "dataset" / "notes" / f"{task_name}.pkl").open("rb") as f:
+        return pickle.load(f)
+
 def get_env_no_residual(args, record_dir: Optional[Path] = None):
     left_hand_action_list = np.load(
-        f"dataset/high_level_trajectories/{args.mimic_task}_left_hand_action_list.npy"
+        PROJECT_ROOT / "dataset" / "high_level_trajectories" / f"{args.mimic_task}_left_hand_action_list.npy"
     )
     right_hand_action_list = np.load(
-        f"dataset/high_level_trajectories/{args.mimic_task}_right_hand_action_list.npy"
+        PROJECT_ROOT / "dataset" / "high_level_trajectories" / f"{args.mimic_task}_right_hand_action_list.npy"
     )
     if args.use_note_trajectory:
-        with open(f"dataset/notes/{args.mimic_task}.pkl", "rb") as f:
-            note_traj = pickle.load(f)
-            task = piano_with_shadow_hands.PianoWithShadowHands(
+        note_traj = _load_note_trajectory(args.mimic_task)
+        task = piano_with_shadow_hands.PianoWithShadowHands(
                 note_trajectory=note_traj,
                 change_color_on_activation=True,
-                trim_silence=True,
-                control_timestep=0.05, #
-                disable_hand_collisions=True,
-                disable_forearm_reward=False,
-                disable_fingering_reward=False,
+                trim_silence=args.trim_silence,
+                control_timestep=args.control_timestep,
+                disable_hand_collisions=args.disable_hand_collisions,
+                disable_forearm_reward=args.disable_forearm_reward,
+                disable_fingering_reward=args.disable_fingering_reward,
                 midi_start_from=args.midi_start_from,
-                n_steps_lookahead=10,
-                gravity_compensation=True,
-                reduced_action_space=False,
+                n_steps_lookahead=args.n_steps_lookahead,
+                gravity_compensation=args.gravity_compensation,
+                reduced_action_space=args.reduced_action_space,
             )
     else:
         task = piano_with_shadow_hands.PianoWithShadowHands(
                 midi=music.load(args.mimic_task),
                 change_color_on_activation=True,
-                trim_silence=True,
-                control_timestep=0.05, #
-                disable_hand_collisions=True,
-                disable_forearm_reward=True,
-                disable_fingering_reward=False,
+                trim_silence=args.trim_silence,
+                control_timestep=args.control_timestep,
+                disable_hand_collisions=args.disable_hand_collisions,
+                disable_forearm_reward=args.disable_forearm_reward,
+                disable_fingering_reward=args.disable_fingering_reward,
                 midi_start_from=args.midi_start_from,
-                n_steps_lookahead=10,
-                gravity_compensation=True,
-                reduced_action_space=False,
+                n_steps_lookahead=args.n_steps_lookahead,
+                gravity_compensation=args.gravity_compensation,
+                reduced_action_space=args.reduced_action_space,
             )
     env = composer_utils.Environment(
         recompile_physics=False, task=task, strip_singleton_obs_buffer_dim=True
@@ -112,30 +115,29 @@ def get_env_no_residual(args, record_dir: Optional[Path] = None):
 
 def get_env(args, record_dir: Optional[Path] = None):
     left_hand_action_list = np.load(
-        f"dataset/high_level_trajectories/{args.mimic_task}_left_hand_action_list.npy"
+        PROJECT_ROOT / "dataset" / "high_level_trajectories" / f"{args.mimic_task}_left_hand_action_list.npy"
     )
     right_hand_action_list = np.load(
-        f"dataset/high_level_trajectories/{args.mimic_task}_right_hand_action_list.npy"
+        PROJECT_ROOT / "dataset" / "high_level_trajectories" / f"{args.mimic_task}_right_hand_action_list.npy"
     )
     length = left_hand_action_list.shape[0]
     trim = False if length >=600 or length < 500 else True
     print(trim)
     if args.use_note_trajectory:
-        with open(f"dataset/notes/{args.mimic_task}.pkl", "rb") as f:
-            note_traj = pickle.load(f)
-            task = piano_with_shadow_hands_res.PianoWithShadowHandsResidual(
+        note_traj = _load_note_trajectory(args.mimic_task)
+        task = piano_with_shadow_hands_res.PianoWithShadowHandsResidual(
                 note_trajectory=note_traj,
                 change_color_on_activation=True,
                 wrong_press_termination=args.wrong_press_termination,
-                trim_silence=trim,
-                control_timestep=0.05, #
-                disable_hand_collisions=True,
-                disable_forearm_reward=True,
-                disable_fingering_reward=False,
-                midi_start_from=0,
-                n_steps_lookahead=10,
-                gravity_compensation=True,
-                reduced_action_space=False,
+                trim_silence=trim if args.trim_silence else False,
+                control_timestep=args.control_timestep,
+                disable_hand_collisions=args.disable_hand_collisions,
+                disable_forearm_reward=args.disable_forearm_reward,
+                disable_fingering_reward=args.disable_fingering_reward,
+                midi_start_from=args.midi_start_from,
+                n_steps_lookahead=args.n_steps_lookahead,
+                gravity_compensation=args.gravity_compensation,
+                reduced_action_space=args.reduced_action_space,
                 residual_factor=args.residual_factor,
                 curriculum=args.curriculum,
             )
@@ -144,15 +146,15 @@ def get_env(args, record_dir: Optional[Path] = None):
             midi=music.load(args.mimic_task),
             change_color_on_activation=True,
             wrong_press_termination=args.wrong_press_termination,
-            trim_silence=trim,
-            control_timestep=0.05, #
-            disable_hand_collisions=True,
-            disable_forearm_reward=True,
-            disable_fingering_reward=False,
-            midi_start_from=0,
-            n_steps_lookahead=10,
-            gravity_compensation=True,
-            reduced_action_space=False,
+            trim_silence=trim if args.trim_silence else False,
+            control_timestep=args.control_timestep,
+            disable_hand_collisions=args.disable_hand_collisions,
+            disable_forearm_reward=args.disable_forearm_reward,
+            disable_fingering_reward=args.disable_fingering_reward,
+            midi_start_from=args.midi_start_from,
+            n_steps_lookahead=args.n_steps_lookahead,
+            gravity_compensation=args.gravity_compensation,
+            reduced_action_space=args.reduced_action_space,
             residual_factor=args.residual_factor,
         )
 
@@ -176,7 +178,7 @@ def get_env(args, record_dir: Optional[Path] = None):
             environment=env,
             demonstrations_lh=left_hand_action_list,
             demonstrations_rh=right_hand_action_list,
-            demo_ctrl_timestep=0.05,
+            demo_ctrl_timestep=args.control_timestep,
             rsi=args.rsi,
         )
     if record_dir is not None:

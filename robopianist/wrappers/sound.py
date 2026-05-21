@@ -25,7 +25,7 @@ from dm_env_wrappers import DmControlVideoWrapper
 from robopianist import SF2_PATH
 from robopianist.models.piano import midi_module
 from robopianist.music import constants as consts
-from robopianist.music import midi_message, synthesizer
+from robopianist.music import midi_message
 
 
 class PianoSoundVideoWrapper(DmControlVideoWrapper):
@@ -46,10 +46,18 @@ class PianoSoundVideoWrapper(DmControlVideoWrapper):
 
         self._midi_module: midi_module.MidiModule = environment.task.piano.midi_module
         self._sample_rate = sample_rate
-        self._synth = synthesizer.Synthesizer(sf2_path, sample_rate)
+        try:
+            from robopianist.music import synthesizer
+
+            self._synth = synthesizer.Synthesizer(sf2_path, sample_rate)
+        except ImportError as exc:
+            self._synth = None
+            self._synth_error = exc
 
     def _write_frames(self) -> None:
         super()._write_frames()
+        if self._synth is None:
+            return
 
         midi_events = self._midi_module.get_all_midi_messages()
 
@@ -115,4 +123,5 @@ class PianoSoundVideoWrapper(DmControlVideoWrapper):
         waveform_name.unlink()
 
     def __del__(self) -> None:
-        self._synth.stop()
+        if getattr(self, "_synth", None) is not None:
+            self._synth.stop()

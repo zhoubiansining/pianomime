@@ -3,27 +3,63 @@ from typing import Optional, Tuple
 from pathlib import Path
 from dataclasses import dataclass, asdict
 
-from robopianist import suite
-import dm_env_wrappers as wrappers
-import robopianist.wrappers as robopianist_wrappers
-from robopianist.suite.tasks import piano_with_shadow_hands_res
-from dm_env_wrappers import CanonicalSpecWrapper
-from robopianist.wrappers import PianoSoundVideoWrapper
-from robopianist.wrappers.pixels import PixelWrapper
-from robopianist.wrappers.deep_mimic import DeepMimicWrapper
-from robopianist.wrappers.residual import ResidualWrapper
-from robopianist.wrappers.fingering_emb import FingeringEmbWrapper
-from robopianist.wrappers.dm2gym import Dm2GymWrapper
-from dm_env_wrappers import SinglePrecisionWrapper
-from dm_env_wrappers import DmControlWrapper
-from robopianist.wrappers.evaluation import MidiEvaluationWrapper
-from mujoco_utils import composer_utils
-from dm_env_wrappers import CanonicalSpecWrapper
-from robopianist.wrappers import PianoSoundVideoWrapper
 import pickle
 import torch
-from robopianist.models.piano import piano_constants as consts
-from robopianist import music
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_PIANO_CONSTS = None
+
+
+def _env_deps():
+    from robopianist.suite.tasks import piano_with_shadow_hands_res
+    from dm_env_wrappers import CanonicalSpecWrapper, SinglePrecisionWrapper, DmControlWrapper
+    from robopianist.wrappers import PianoSoundVideoWrapper
+    from robopianist.wrappers.dm2gym import Dm2GymWrapper
+    from robopianist.wrappers.evaluation import MidiEvaluationWrapper
+    from robopianist.wrappers.deep_mimic import DeepMimicWrapper
+    from robopianist.wrappers.fingering_emb import FingeringEmbWrapper
+    from robopianist.wrappers.residual import ResidualWrapper
+    from mujoco_utils import composer_utils
+    from robopianist import music
+
+    return (
+        piano_with_shadow_hands_res,
+        CanonicalSpecWrapper,
+        PianoSoundVideoWrapper,
+        Dm2GymWrapper,
+        SinglePrecisionWrapper,
+        DmControlWrapper,
+        MidiEvaluationWrapper,
+        DeepMimicWrapper,
+        FingeringEmbWrapper,
+        ResidualWrapper,
+        composer_utils,
+        music,
+    )
+
+
+def _piano_consts():
+    global _PIANO_CONSTS
+    if _PIANO_CONSTS is None:
+        from robopianist.models.piano import piano_constants as consts
+        _PIANO_CONSTS = consts
+    return _PIANO_CONSTS
+
+
+def _module_device(module):
+    try:
+        return next(module.parameters()).device
+    except StopIteration:
+        return torch.device("cpu")
+
+
+def _load_note_trajectory(task_name):
+    train_path = PROJECT_ROOT / "dataset" / "notes" / f"{task_name}.pkl"
+    test_path = PROJECT_ROOT / "dataset" / "notes_test" / f"{task_name}.pkl"
+    path = train_path if train_path.exists() else test_path
+    with path.open("rb") as f:
+        return pickle.load(f)
+
 
 WHITE_KEY_INDICES = [
         0,
@@ -162,7 +198,8 @@ class Args:
     camera_id: Optional[str | int] = "piano/back"
     action_reward_observation: bool = False
 
-def get_diffusion_obs_1(timestep, exclude_keys=[]):
+def get_diffusion_obs_1(timestep, exclude_keys=None):
+    exclude_keys = exclude_keys or []
     ret = {}
     if 'fingering' not in exclude_keys:
         fingering = timestep.observation['fingering']
@@ -195,9 +232,11 @@ def get_goal_only_obs(timestep, lookahead=0):
     goal = goal.flatten()
     return goal
 
-def get_diffusion_obs(timestep, lookahead=3, exclude_keys=[], 
-                      encoder=None, plan_encoder=None, sampling=False, 
-                      current_fingertip=None, concatenate_keys=[]):
+def get_diffusion_obs(timestep, lookahead=3, exclude_keys=None,
+                      encoder=None, plan_encoder=None, sampling=False,
+                      current_fingertip=None, concatenate_keys=None):
+    exclude_keys = exclude_keys or []
+    concatenate_keys = concatenate_keys or []
     ret = {}
     goal = timestep.observation['goal'][:89*(lookahead+1)]
     goal = goal.reshape(lookahead+1, 89)
@@ -208,31 +247,40 @@ def get_diffusion_obs(timestep, lookahead=3, exclude_keys=[],
     if encoder is not None and sampling:
         # Add a dimension to goal at last axis
         goal = np.expand_dims(goal, axis=-1)
-        goal = encoder(torch.from_numpy(goal))
-        ret['goal'] = goal.detach().numpy().flatten()
+        goal_tensor = torch.from_numpy(goal).to(_module_device(encoder))
+        with torch.no_grad():
+            goal = encoder(goal_tensor)
+        if goal.device.type != "cpu":
+            ret['goal'] = goal.detach().cpu().numpy().flatten()
+        else:
+            ret['goal'] = goal.detach().numpy().flatten()
     elif encoder is not None and not sampling:
         goal = np.expand_dims(goal, axis=-1)
         # print(goal.reshape(lookahead+1, -1)[0])
-        if torch.cuda.is_available():
-            goal = torch.from_numpy(goal).cuda()
+        device = _module_device(encoder)
+        goal = torch.from_numpy(goal).to(device)
+        with torch.no_grad():
             goal = encoder.forward_without_sampling(goal)
+        if goal.device.type != "cpu":
             ret['goal'] = goal.detach().cpu().numpy().flatten()
-            # print(ret['goal'].reshape(lookahead+1, -1)[0])
-            # raise ValueError
         else:
-            goal = encoder.forward_without_sampling(torch.from_numpy(goal))
             ret['goal'] = goal.detach().numpy().flatten()
     else:
         ret['goal'] = goal.flatten()      
     if plan_encoder is not None:
         assert current_fingertip is not None
+        device = _module_device(plan_encoder)
         goal = ret['goal']
-        goal = torch.from_numpy(goal)
-        cond = torch.from_numpy(current_fingertip)
+        goal = torch.from_numpy(goal).to(device)
+        cond = torch.from_numpy(current_fingertip).to(device)
         goal = goal.unsqueeze(0).float()
         cond = cond.unsqueeze(0).float()
-        plan = plan_encoder.forward_without_sampling(goal, cond)
-        ret['goal'] = plan.detach().numpy().flatten()
+        with torch.no_grad():
+            plan = plan_encoder.forward_without_sampling(goal, cond)
+        if plan.device.type != "cpu":
+            ret['goal'] = plan.detach().cpu().numpy().flatten()
+        else:
+            ret['goal'] = plan.detach().numpy().flatten()
     elif current_fingertip is not None:
         ret['current_fingertip'] = current_fingertip.flatten()
     if 'hand' not in exclude_keys:  
@@ -263,7 +311,7 @@ def get_diffusion_obs(timestep, lookahead=3, exclude_keys=[],
     if 'q_piano' not in exclude_keys:
         q_piano = timestep.observation['piano/state']
         ret['q_piano'] = q_piano
-    if concatenate_keys != []:
+    if concatenate_keys:
         for key in concatenate_keys:
             ret[key] = ret[key].reshape(lookahead+1, -1)
         ret['cont'] = np.concatenate([ret[key] for key in concatenate_keys], axis=1).flatten()
@@ -271,8 +319,8 @@ def get_diffusion_obs(timestep, lookahead=3, exclude_keys=[],
             del ret[key]
     return ret
 
-def get_flattend_obs(timestep, lookahead=3, exclude_keys=[], encoder=None, sampling=False, 
-                     plan_encoder=None, current_fingertip=None, concatenate_keys=[]):
+def get_flattend_obs(timestep, lookahead=3, exclude_keys=None, encoder=None, sampling=False,
+                     plan_encoder=None, current_fingertip=None, concatenate_keys=None):
     ret = get_diffusion_obs(timestep, lookahead, exclude_keys=exclude_keys, encoder=encoder, sampling=sampling, 
                             plan_encoder=plan_encoder, current_fingertip=current_fingertip, concatenate_keys=concatenate_keys)
     # Concatenate the items in ret
@@ -288,10 +336,23 @@ def get_flattend_obs(timestep, lookahead=3, exclude_keys=[], encoder=None, sampl
 
 def get_env_test(task_name, enable_ik = True, record_dir=None, lookahead = 3,
                 use_fingering_emb=False, use_note_traj=False):
+    (
+        piano_with_shadow_hands_res,
+        CanonicalSpecWrapper,
+        PianoSoundVideoWrapper,
+        Dm2GymWrapper,
+        SinglePrecisionWrapper,
+        DmControlWrapper,
+        MidiEvaluationWrapper,
+        _DeepMimicWrapper,
+        _FingeringEmbWrapper,
+        _ResidualWrapper,
+        composer_utils,
+        music,
+    ) = _env_deps()
     # start_from = start_from_dict.START_FROM[task_name]
     if use_note_traj:
-        with open('handtracking/notes/{}.pkl'.format(task_name), 'rb') as f:
-            note_traj = pickle.load(f)
+        note_traj = _load_note_trajectory(task_name)
 
     trim = True
     if use_note_traj:
@@ -356,16 +417,41 @@ def get_env_test(task_name, enable_ik = True, record_dir=None, lookahead = 3,
     return env.env
     
 
-def get_env_hl(task_name, record_dir=None, lookahead = 3, use_fingering_emb=False,
-                use_midi=False):
+def get_env_hl(
+    task_name,
+    record_dir=None,
+    lookahead=3,
+    use_fingering_emb=False,
+    use_midi=False,
+    control_timestep=0.05,
+    disable_hand_collisions=True,
+    disable_forearm_reward=True,
+    disable_fingering_reward=False,
+    midi_start_from=0,
+    gravity_compensation=True,
+    residual_factor=1,
+    shift=0,
+    record_every=1,
+    camera_id="piano/back",
+    clip=True,
+):
+    (
+        piano_with_shadow_hands_res,
+        CanonicalSpecWrapper,
+        PianoSoundVideoWrapper,
+        Dm2GymWrapper,
+        SinglePrecisionWrapper,
+        DmControlWrapper,
+        MidiEvaluationWrapper,
+        _DeepMimicWrapper,
+        _FingeringEmbWrapper,
+        _ResidualWrapper,
+        composer_utils,
+        music,
+    ) = _env_deps()
     # start_from = start_from_dict.START_FROM[task_name]
     if not use_midi:
-        try:
-            with open('dataset/notes/{}.pkl'.format(task_name), 'rb') as f:
-                note_traj = pickle.load(f)
-        except:
-            with open('dataset/notes_test/{}.pkl'.format(task_name), 'rb') as f:
-                note_traj = pickle.load(f)
+        note_traj = _load_note_trajectory(task_name)
         notes = note_traj.notes        
         length = len(notes)
         trim = False if length >=600 or length < 500 else True
@@ -376,15 +462,15 @@ def get_env_hl(task_name, record_dir=None, lookahead = 3, use_fingering_emb=Fals
             midi=music.load(task_name),
             change_color_on_activation=True,
             trim_silence=True,
-            control_timestep=0.05,
-            disable_hand_collisions=True,
-            disable_forearm_reward=True,
-            disable_fingering_reward=False,
-            midi_start_from=0,
+            control_timestep=control_timestep,
+            disable_hand_collisions=disable_hand_collisions,
+            disable_forearm_reward=disable_forearm_reward,
+            disable_fingering_reward=disable_fingering_reward,
+            midi_start_from=midi_start_from,
             n_steps_lookahead=lookahead,
-            gravity_compensation=True,
-            residual_factor=1,
-            shift=0,
+            gravity_compensation=gravity_compensation,
+            residual_factor=residual_factor,
+            shift=shift,
             enable_joints_vel_obs=True,
             fingering_lookahead=use_fingering_emb,
         )
@@ -395,15 +481,15 @@ def get_env_hl(task_name, record_dir=None, lookahead = 3, use_fingering_emb=Fals
             # midi=music.load(task_name),
             change_color_on_activation=True,
             trim_silence=trim,
-            control_timestep=0.05,
-            disable_hand_collisions=True,
-            disable_forearm_reward=True,
-            disable_fingering_reward=False,
-            midi_start_from=0,
+            control_timestep=control_timestep,
+            disable_hand_collisions=disable_hand_collisions,
+            disable_forearm_reward=disable_forearm_reward,
+            disable_fingering_reward=disable_fingering_reward,
+            midi_start_from=midi_start_from,
             n_steps_lookahead=lookahead,
-            gravity_compensation=True,
-            residual_factor=1,
-            shift=0,
+            gravity_compensation=gravity_compensation,
+            residual_factor=residual_factor,
+            shift=shift,
             enable_joints_vel_obs=True,
             fingering_lookahead=use_fingering_emb,
         )
@@ -414,14 +500,14 @@ def get_env_hl(task_name, record_dir=None, lookahead = 3, use_fingering_emb=Fals
     if record_dir is not None:
         env = PianoSoundVideoWrapper(
             env,
-            record_every=1,
-            camera_id="piano/back",
+            record_every=record_every,
+            camera_id=camera_id,
             record_dir=record_dir,
         )
     env = MidiEvaluationWrapper(
         environment=env, deque_size=1
     )
-    env = CanonicalSpecWrapper(env, clip=True)
+    env = CanonicalSpecWrapper(env, clip=clip)
 
     env = SinglePrecisionWrapper(env)
     env = DmControlWrapper(env)
@@ -430,20 +516,50 @@ def get_env_hl(task_name, record_dir=None, lookahead = 3, use_fingering_emb=Fals
     
     return env.env, length
 
-def get_env_ll(task_name, enable_ik = True, record_dir=None, lookahead = 3, external_demo=False, use_fingering_emb=False,
-            external_fingering=None, use_midi=False):
+def get_env_ll(
+    task_name,
+    enable_ik=True,
+    record_dir=None,
+    lookahead=3,
+    external_demo=False,
+    use_fingering_emb=False,
+    external_fingering=None,
+    use_midi=False,
+    control_timestep=0.05,
+    disable_hand_collisions=True,
+    disable_forearm_reward=True,
+    disable_fingering_reward=False,
+    midi_start_from=0,
+    gravity_compensation=True,
+    residual_factor_ik=0.03,
+    residual_factor_no_ik=1,
+    shift=0,
+    record_every=1,
+    camera_id="piano/back",
+    demo_ctrl_timestep=0.05,
+    clip=True,
+):
+    (
+        piano_with_shadow_hands_res,
+        CanonicalSpecWrapper,
+        PianoSoundVideoWrapper,
+        Dm2GymWrapper,
+        SinglePrecisionWrapper,
+        DmControlWrapper,
+        MidiEvaluationWrapper,
+        DeepMimicWrapper,
+        FingeringEmbWrapper,
+        ResidualWrapper,
+        composer_utils,
+        music,
+    ) = _env_deps()
     # start_from = start_from_dict.START_FROM[task_name]
     if not use_midi:
-        try:
-            with open('dataset/notes/{}.pkl'.format(task_name), 'rb') as f:
-                note_traj = pickle.load(f)
-        except:
-            with open('dataset/notes_test/{}.pkl'.format(task_name), 'rb') as f:
-                note_traj = pickle.load(f)
+        note_traj = _load_note_trajectory(task_name)
 
     # Load hand action trajectory
-    left_hand_action_list = np.load('pianomime/multi_task/trajectories/{}_left_hand_action_list.npy'.format(task_name))
-    right_hand_action_list = np.load('pianomime/multi_task/trajectories/{}_right_hand_action_list.npy'.format(task_name))
+    left_hand_action_list = np.load(PROJECT_ROOT / "multi_task" / "trajectories" / f"{task_name}_left_hand_action_list.npy")
+    right_hand_action_list = np.load(PROJECT_ROOT / "multi_task" / "trajectories" / f"{task_name}_right_hand_action_list.npy")
             
     length = left_hand_action_list.shape[0]
     trim = False if length >=600 or length < 500 else True
@@ -453,15 +569,15 @@ def get_env_ll(task_name, enable_ik = True, record_dir=None, lookahead = 3, exte
             midi=music.load(task_name),
             change_color_on_activation=True,
             trim_silence=True,
-            control_timestep=0.05,
-            disable_hand_collisions=True,
-            disable_forearm_reward=True,
-            disable_fingering_reward=False,
-            midi_start_from=0,
+            control_timestep=control_timestep,
+            disable_hand_collisions=disable_hand_collisions,
+            disable_forearm_reward=disable_forearm_reward,
+            disable_fingering_reward=disable_fingering_reward,
+            midi_start_from=midi_start_from,
             n_steps_lookahead=lookahead,
-            gravity_compensation=True,
-            residual_factor=0.03 if enable_ik else 1,
-            shift=0,
+            gravity_compensation=gravity_compensation,
+            residual_factor=residual_factor_ik if enable_ik else residual_factor_no_ik,
+            shift=shift,
             enable_joints_vel_obs=True,
             fingering_lookahead=use_fingering_emb,
         )
@@ -470,15 +586,15 @@ def get_env_ll(task_name, enable_ik = True, record_dir=None, lookahead = 3, exte
             note_trajectory=note_traj,
             change_color_on_activation=True,
             trim_silence=trim,
-            control_timestep=0.05,
-            disable_hand_collisions=True,
-            disable_forearm_reward=True,
-            disable_fingering_reward=False,
-            midi_start_from=0,
+            control_timestep=control_timestep,
+            disable_hand_collisions=disable_hand_collisions,
+            disable_forearm_reward=disable_forearm_reward,
+            disable_fingering_reward=disable_fingering_reward,
+            midi_start_from=midi_start_from,
             n_steps_lookahead=lookahead,
-            gravity_compensation=True,
-            residual_factor=0.03 if enable_ik else 1,
-            shift=0,
+            gravity_compensation=gravity_compensation,
+            residual_factor=residual_factor_ik if enable_ik else residual_factor_no_ik,
+            shift=shift,
             enable_joints_vel_obs=True,
             fingering_lookahead=use_fingering_emb,
         )
@@ -490,8 +606,8 @@ def get_env_ll(task_name, enable_ik = True, record_dir=None, lookahead = 3, exte
     if record_dir is not None:
         env = PianoSoundVideoWrapper(
             env,
-            record_every=1,
-            camera_id="piano/back",
+            record_every=record_every,
+            camera_id=camera_id,
             record_dir=record_dir,
         )
     if use_fingering_emb:
@@ -509,14 +625,14 @@ def get_env_ll(task_name, enable_ik = True, record_dir=None, lookahead = 3, exte
     env = ResidualWrapper(env, 
                         demonstrations_lh=left_hand_action_list,
                         demonstrations_rh=right_hand_action_list,
-                        demo_ctrl_timestep=0.05,
+                        demo_ctrl_timestep=demo_ctrl_timestep,
                         enable_ik=enable_ik,
                         external_demo=external_demo,)
     env = MidiEvaluationWrapper(
         environment=env, deque_size=1
     )
     if enable_ik:
-        env = CanonicalSpecWrapper(env, clip=True)
+        env = CanonicalSpecWrapper(env, clip=clip)
 
     env = SinglePrecisionWrapper(env)
     env = DmControlWrapper(env)
@@ -526,6 +642,7 @@ def get_env_ll(task_name, enable_ik = True, record_dir=None, lookahead = 3, exte
     return env.env
 
 def adjust_ft_fingering(env, keys, lh_ft, rh_ft, last_keys=None, last_lh_ft=None, last_rh_ft=None, last_fingering=None):
+    consts = _piano_consts()
     # print(lh_ft, rh_ft)
     lh_ft[2, :] = np.ones(6) * consts.WHITE_KEY_HEIGHT * 2
     rh_ft[2, :] = np.ones(6) * consts.WHITE_KEY_HEIGHT * 2
@@ -592,4 +709,3 @@ def adjust_ft_fingering(env, keys, lh_ft, rh_ft, last_keys=None, last_lh_ft=None
             
         
             
-

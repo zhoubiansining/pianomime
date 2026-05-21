@@ -1,53 +1,43 @@
 import sys
-directory = 'pianomime'
-if directory not in sys.path:
-    sys.path.append(directory)
-from robopianist.controller.ik_controller import move_finger_to_key, move_fingers_to_keys, move_fingers_to_pos_qp
-from IPython.display import HTML
-from base64 import b64encode
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+import argparse
 import numpy as np
-from robopianist.models.piano import piano_constants
-from robopianist.suite.tasks import self_actuated_piano
-from robopianist.suite.tasks import piano_with_shadow_hands
-from robopianist.suite.tasks import piano_with_one_shadow_hand
 from robopianist.suite.tasks import piano_with_shadow_hands_res
 from dm_env_wrappers import CanonicalSpecWrapper
 from robopianist.wrappers import PianoSoundVideoWrapper
-from robopianist.wrappers.pixels import PixelWrapper
 from robopianist.wrappers.deep_mimic import DeepMimicWrapper
 from robopianist.wrappers.residual import ResidualWrapper
-from robopianist.wrappers.fingering_emb import FingeringEmbWrapper
 from robopianist.wrappers.dm2gym import Dm2GymWrapper
 from dm_env_wrappers import SinglePrecisionWrapper
 from dm_env_wrappers import DmControlWrapper
 from robopianist.wrappers.evaluation import MidiEvaluationWrapper
-from robopianist import music
 from mujoco_utils import composer_utils
-import dm_env
-from robopianist.models.hands import HandSide
-import matplotlib.pyplot as plt
-from dm_control.mujoco.wrapper import mjbindings
-import os
-from collections import namedtuple
-import time
 import tqdm
 import pickle
+from pianomime_config import DEFAULT_CONFIG_PATH, load_config, section
 
-mjlib = mjbindings.mjlib
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("song_name")
+    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
+    return parser.parse_args()
 
 def play_video(filename: str):
-    mp4 = open(filename,'rb').read()
-    data_url = "data:video/mp4;base64," + b64encode(mp4).decode()
-    HTML("""
-    <video width=400 controls>
-          <source src="%s" type="video/mp4">
-    </video>
-    """ % data_url)
+    return filename
 
-task_name = sys.argv[1]
+args = parse_args()
+config = load_config(args.config)
+replay_config = section(config, "single_song", "replay")
+task_name = args.song_name
 
 # start_from = start_from_dict.START_FROM[task_name]
-with open('dataset/notes/{}.pkl'.format(task_name), 'rb') as f:
+with (PROJECT_ROOT / "dataset" / "notes" / f"{task_name}.pkl").open("rb") as f:
     note_traj = pickle.load(f)
 
 
@@ -55,23 +45,23 @@ task = piano_with_shadow_hands_res.PianoWithShadowHandsResidual(
     note_trajectory=note_traj,
     change_color_on_activation=True,
     trim_silence=True,
-    control_timestep=0.05,
-    disable_hand_collisions=True,
-    disable_forearm_reward=True,
-    disable_fingering_reward=False,
-    midi_start_from=0,
-    n_steps_lookahead=10,
-    gravity_compensation=True,
-    residual_factor=0.03,
-    shift=0,
+    control_timestep=float(replay_config.get("control_timestep", 0.05)),
+    disable_hand_collisions=bool(replay_config.get("disable_hand_collisions", True)),
+    disable_forearm_reward=bool(replay_config.get("disable_forearm_reward", True)),
+    disable_fingering_reward=bool(replay_config.get("disable_fingering_reward", False)),
+    midi_start_from=int(replay_config.get("midi_start_from", 0)),
+    n_steps_lookahead=int(replay_config.get("n_steps_lookahead", 10)),
+    gravity_compensation=bool(replay_config.get("gravity_compensation", True)),
+    residual_factor=float(replay_config.get("residual_factor", 0.03)),
+    shift=int(replay_config.get("shift", 0)),
 )
 
 # Load hand action trajectory
-left_hand_action_list = np.load('dataset/high_level_trajectories/{}_left_hand_action_list.npy'.format(task_name))
-right_hand_action_list = np.load('dataset/high_level_trajectories/{}_right_hand_action_list.npy'.format(task_name))
+left_hand_action_list = np.load(PROJECT_ROOT / "dataset" / "high_level_trajectories" / f"{task_name}_left_hand_action_list.npy")
+right_hand_action_list = np.load(PROJECT_ROOT / "dataset" / "high_level_trajectories" / f"{task_name}_right_hand_action_list.npy")
 
 # Load trained actions
-actions = np.load('dataset/low_level_policies/{}/actions_{}.npy'.format(task_name, task_name))
+actions = np.load(PROJECT_ROOT / "dataset" / "low_level_policies" / task_name / f"actions_{task_name}.npy")
 
 env = composer_utils.Environment(
     recompile_physics=False, task=task, strip_singleton_obs_buffer_dim=True
@@ -79,23 +69,23 @@ env = composer_utils.Environment(
 
 env = PianoSoundVideoWrapper(
     env,
-    record_every=1,
-    camera_id="piano/back",
-    record_dir=".",
+    record_every=int(replay_config.get("record_every", 1)),
+    camera_id=replay_config.get("camera_id", "piano/back"),
+    record_dir=replay_config.get("record_dir", "."),
 )
 env = DeepMimicWrapper(env,
                       demonstrations_lh=left_hand_action_list,
                       demonstrations_rh=right_hand_action_list,
                       remove_goal_observation=False,
-                      mimic_z_axis=False,)
+                      mimic_z_axis=bool(replay_config.get("mimic_z_axis", False)),)
 env = ResidualWrapper(env, 
                       demonstrations_lh=left_hand_action_list,
                       demonstrations_rh=right_hand_action_list,
-                      demo_ctrl_timestep=0.05,)
+                      demo_ctrl_timestep=float(replay_config.get("demo_ctrl_timestep", 0.05)),)
 env = MidiEvaluationWrapper(
     environment=env, deque_size=1
 )
-env = CanonicalSpecWrapper(env, clip=True)
+env = CanonicalSpecWrapper(env, clip=bool(replay_config.get("clip", True)))
 
 env = SinglePrecisionWrapper(env)
 env = DmControlWrapper(env)
@@ -121,5 +111,3 @@ for step in timesteps:
 print(env.get_musical_metrics())
 
 play_video(env.latest_filename)
-
-

@@ -10,9 +10,6 @@ from tqdm import tqdm
 import torch
 import shutil
 
-import sac
-import specs
-import replay
 import logging_callback
 import lr_scheduler
 
@@ -21,9 +18,6 @@ from base64 import b64encode
 
 import os
 import pickle
-
-import orbax.checkpoint
-from flax.training import orbax_utils
 
 from robopianist import suite
 import dm_env_wrappers as wrappers
@@ -94,7 +88,6 @@ class Args:
     record_resolution: Tuple[int, int] = (480, 640)
     camera_id: Optional[str | int] = "piano/back"
     action_reward_observation: bool = False
-    agent_config: sac.SACConfig = sac.SACConfig()
     deepmimic: bool = False
     mimic_task: str = "TwinkleTwinkleRousseau"
     midi_start_from: int = 0    

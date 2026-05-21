@@ -1,0 +1,175 @@
+# Central configuration for the course PianoMime baseline pipeline.
+#
+# Paths support these placeholders:
+#   {home}           current user's home directory
+#   {project_root}   repository root
+#   {project_parent} parent directory of the repository
+#   {shared_root}, {runtime_root}, {venv}, {results_dir}, {local_results_dir}
+
+[paths]
+project_dir = "{project_root}"
+shared_root = "{project_parent}"
+venv = "{shared_root}/.venv"
+python_bin = "{venv}/bin/python"
+results_dir = "{shared_root}/baseline_results"
+artifact_cache = "{shared_root}/artifacts"
+runtime_root = "{home}/piano_scratch"
+runtime_dir = "{runtime_root}/pianomime"
+local_results_dir = "{runtime_root}/baseline_results"
+
+[artifacts]
+dataset_id = "1X8q-PvqyqL2X15wCZevTfAtSDfiHpYAa"
+checkpoint_id = "1-wa1UAn_mbPN87D6GIi4PS0VNDE5mbQh"
+dataset_zip_name = "pianomime_dataset_download"
+checkpoint_zip_name = "pianomime_checkpoints_download"
+
+[environment]
+mujoco_gl = "egl"
+xla_python_client_preallocate = "false"
+wandb_mode = "disabled"
+
+[scheduler]
+session = "pianomime_baseline"
+run_id = ""
+gpu_ids = ""
+gpu_free_mem_mb = 5000
+poll_seconds = 60
+skip_runtime_sync = false
+
+[single_song]
+replay_songs = ["Stan_1", "Petrunko_3", "NeverGonnaGiveYouUp_1"]
+ppo_songs = ["Petrunko_3"]
+
+[single_song.replay]
+control_timestep = 0.05
+demo_ctrl_timestep = 0.05
+disable_hand_collisions = true
+disable_forearm_reward = true
+disable_fingering_reward = false
+midi_start_from = 0
+n_steps_lookahead = 10
+gravity_compensation = true
+residual_factor = 0.03
+shift = 0
+record_every = 1
+camera_id = "piano/back"
+record_dir = "."
+mimic_z_axis = false
+clip = true
+
+[single_song.ppo]
+root_dir = "{local_results_dir}/single_song/training_runs"
+warmstart_steps = 5000
+max_steps = 1000000
+discount = 0.99
+trim_silence = true
+gravity_compensation = true
+control_timestep = 0.05
+n_steps_lookahead = 0
+disable_fingering_reward = true
+disable_hand_collisions = true
+disable_forearm_reward = true
+tqdm_bar = true
+eval_episodes = 1
+camera_id = "piano/back"
+midi_start_from = 0
+residual_action = true
+frame_stack = 4
+num_envs = 1
+initial_lr = 0.0003
+lr_decay_rate = 0.999
+n_steps = 512
+use_note_trajectory = true
+total_iters = 2000
+residual_factor = 0.03
+deepmimic = true
+seed = 42
+batch_size = 256
+ppo_n_epochs = 10
+ppo_batch_size = 1024
+policy_activation = "gelu"
+policy_pi_arch = [1024, 256]
+policy_vf_arch = [1024, 256]
+
+[multisong]
+songs = [
+  "Alone_1",
+  "Numb_1",
+  "NoTimeToDie_1",
+  "Forester_1",
+  "EyesClosed_1",
+  "Paradise_1",
+  "SomewhereOnlyWeKnow_1",
+]
+
+[multisong.high_level]
+pred_horizon = 4
+action_horizon = 1
+obs_horizon = 1
+obs_dim = 212
+action_dim = 36
+midi_channel = 16
+num_seeds = 1
+seed = 0
+lookahead = 10
+control_timestep = 0.05
+disable_hand_collisions = true
+disable_forearm_reward = true
+disable_fingering_reward = false
+midi_start_from = 0
+gravity_compensation = true
+residual_factor = 1
+shift = 0
+clip = true
+ae_latent_dim = 16
+ae_cond_dim = 64
+midi_encoder_in_channels = 16
+midi_encoder_mid_channels = 32
+midi_encoder_out_channels = 64
+midi_encoder_latent_dim = 32
+midi_encoder_noise = 0.08
+diffusion_iters = 100
+beta_schedule = "squaredcos_cap_v2"
+clip_sample = true
+prediction_type = "epsilon"
+
+[multisong.low_level]
+pred_horizon = 4
+action_horizon = 4
+obs_horizon = 1
+obs_dim = 404
+action_dim = 46
+lookahead = 10
+obs_lookahead = 3
+enable_ik = false
+record_dir = "."
+use_fingering_emb = false
+use_midi = false
+control_timestep = 0.05
+disable_hand_collisions = true
+disable_forearm_reward = true
+disable_fingering_reward = false
+midi_start_from = 0
+gravity_compensation = true
+residual_factor_ik = 0.03
+residual_factor_no_ik = 1
+shift = 0
+record_every = 1
+camera_id = "piano/back"
+demo_ctrl_timestep = 0.05
+clip = true
+ae_latent_dim = 16
+ae_cond_dim = 64
+midi_encoder_in_channels = 52
+midi_encoder_mid_channels = 64
+midi_encoder_out_channels = 128
+midi_encoder_horizon = 4
+noise_fingering = 0
+noise_ft = 0
+midi_dim = 208
+midi_cond_dim = 0
+freeze_encoder = false
+diffusion_iters = 50
+beta_schedule = "squaredcos_cap_v2"
+clip_sample = true
+prediction_type = "epsilon"
