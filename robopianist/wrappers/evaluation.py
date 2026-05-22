@@ -122,21 +122,10 @@ class MidiEvaluationWrapper(EnvironmentWrapper):
             presses[keys] = 1.0
             ground_truth.append(presses)
 
-        # Deal with the case where the episode gets truncated due to a failure. In this
-        # case, the length of the key presses will be less than or equal to the length
-        # of the ground truth.
-        if hasattr(self._environment.task, "_wrong_press_termination"):
-            failure_termination = self._environment.task._wrong_press_termination
-            if failure_termination:
-                ground_truth = ground_truth[: len(self._key_presses)]
-            elif hasattr(self._environment, "_rsi"):
-                rsi = self._environment._rsi
-                if rsi:
-                    ground_truth = ground_truth[-len(self._key_presses) :]
-                elif hasattr(self._environment.task, "_curriculum"):
-                    curriculum = self._environment.task._curriculum
-                    if curriculum:
-                        ground_truth = ground_truth[: len(self._key_presses)]
+        episode_start_idx = int(getattr(self._environment, "episode_start_idx", 0))
+        ground_truth = ground_truth[
+            episode_start_idx:episode_start_idx + len(self._key_presses)
+        ]
 
         assert len(ground_truth) == len(self._key_presses)
 
@@ -164,10 +153,10 @@ class MidiEvaluationWrapper(EnvironmentWrapper):
             np.atleast_1d(v).astype(float) for v in self._environment.task._sustains
         ]
 
-        if hasattr(self._environment.task, "_wrong_press_termination"):
-            failure_termination = self._environment.task._wrong_press_termination
-            if failure_termination:
-                ground_truth = ground_truth[: len(self._sustain_presses)]
+        episode_start_idx = int(getattr(self._environment, "episode_start_idx", 0))
+        ground_truth = ground_truth[
+            episode_start_idx:episode_start_idx + len(self._sustain_presses)
+        ]
 
         precisions = []
         recalls = []

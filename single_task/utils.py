@@ -14,9 +14,6 @@ import lr_scheduler
 
 import os
 
-import orbax.checkpoint
-from flax.training import orbax_utils
-
 import dm_env_wrappers as wrappers
 
 import robopianist.wrappers as robopianist_wrappers
@@ -110,7 +107,7 @@ def get_env_no_residual(args, record_dir: Optional[Path] = None):
     return env
 
 
-def get_env(args, record_dir: Optional[Path] = None):
+def get_env(args, record_dir: Optional[Path] = None, enable_midi_evaluation: bool = False):
     left_hand_action_list = np.load(
         f"dataset/high_level_trajectories/{args.mimic_task}_left_hand_action_list.npy"
     )
@@ -196,6 +193,10 @@ def get_env(args, record_dir: Optional[Path] = None):
         )
     else:
         env = wrappers.EpisodeStatisticsWrapper(environment=env, deque_size=1)
+        if enable_midi_evaluation:
+            env = robopianist_wrappers.MidiEvaluationWrapper(
+                environment=env, deque_size=1
+            )
     if args.action_reward_observation:
         env = wrappers.ObservationActionRewardWrapper(env)
     env = wrappers.ConcatObservationWrapper(env)

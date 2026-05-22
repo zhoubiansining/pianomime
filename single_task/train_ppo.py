@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 import tyro
 from dataclasses import dataclass, asdict
 import wandb
-import time
+from datetime import datetime
 import random
 import numpy as np
 from tqdm import tqdm
@@ -41,6 +41,7 @@ class Args:
     warmstart_steps: int = 5_000
     log_interval: int = 1_000
     eval_interval: int = 10_000
+    eval_every_iters: int = 10
     eval_episodes: int = 1
     batch_size: int = 256
     discount: float = 0.99
@@ -51,7 +52,7 @@ class Args:
     name: str = ""
     tags: str = ""
     notes: str = ""
-    mode: str = "disabled"
+    mode: str = "online"
     environment_name: str = "RoboPianist-debug-TwinkleTwinkleRousseau-v0"
     n_steps_lookahead: int = 10
     trim_silence: bool = False
@@ -94,10 +95,12 @@ def prefix_dict(prefix: str, d: dict) -> dict:
     return {f"{prefix}/{k}": v for k, v in d.items()}
 
 def main(args: Args) -> None:
+    timestamp = datetime.now().strftime("%m%d_%H%M%S")
+    run_name_parts = ["PPO", args.environment_name, str(args.seed)]
     if args.name:
-        run_name = args.name
-    else:
-        run_name = f"PPO-{args.environment_name}-{args.seed}-{time.time()}"
+        run_name_parts.append(args.name)
+    run_name_parts.append(timestamp)
+    run_name = "-".join(run_name_parts)
 
     # Create experiment directory.
     experiment_dir = Path(args.root_dir) / run_name
@@ -107,22 +110,34 @@ def main(args: Args) -> None:
     random.seed(args.seed)
     np.random.seed(args.seed)
 
-    # wandb.login()
+    if args.mode == "online":
+        wandb_login_kwargs = {
+            "host": os.environ.get("WANDB_HOST", "https://wandb.glm.ai")
+        }
+        wandb_api_key = os.environ.get("WANDB_API_KEY")
+        if wandb_api_key:
+            wandb_login_kwargs["key"] = wandb_api_key
+        wandb.login(**wandb_login_kwargs)
 
-    # wandb.init(
-    #     project=args.project,
-    #     config=asdict(args),
-    #     name=run_name,
-    #     sync_tensorboard=True,
-    # )
+    wandb.init(
+        project=args.project,
+        entity=args.entity or None,
+        config=asdict(args),
+        name=run_name,
+        notes=args.notes or None,
+        tags=args.tags.split(",") if args.tags else None,
+        sync_tensorboard=False,
+        mode=args.mode,
+        settings=wandb.Settings(x_disable_stats=True),
+    )
     eval_args = copy(args)
     eval_args = replace(eval_args, rsi=False)
-    eval_env = get_env(eval_args, record_dir=experiment_dir / "eval")
+    eval_env = get_env(eval_args, record_dir=None, enable_midi_evaluation=True)
     def make_env():
         env = get_env(args)
         return Monitor(env)
     # Parallel environments
-    vec_env = SubprocVecEnv([make_envs(make_env, i) for i in range(args.num_envs)], start_method="fork")
+    vec_env = SubprocVecEnv([make_envs(make_env, i, seed=args.seed) for i in range(args.num_envs)], start_method="fork")
 
     lr_scheduler_instance = lr_scheduler.LR_Scheduler(initial_lr=args.initial_lr,
                                                       decay_rate=args.lr_decay_rate,)
@@ -144,60 +159,130 @@ def main(args: Args) -> None:
         custom_objects = { 'learning_rate': lr_scheduler_instance.lr_schedule}
         model = PPO.load(args.pretrained, env=vec_env, custom_objects=custom_objects)
     best_f1 = -np.inf
+    best_model_path = Path("./robopianist_rl/ckpts") / f"{run_name}_best"
+    best_model_path.parent.mkdir(parents=True, exist_ok=True)
     # last_extending_curriculum_step = 0
+    last_iter = 0
     try:
         for i in range(args.total_iters):
+            last_iter = i + 1
             # Training
             model.learn(total_timesteps=args.n_steps*args.num_envs, 
                         progress_bar=True,
                         reset_num_timesteps=False,
                         callback= None)
+            should_eval = (
+                args.eval_every_iters > 0
+                and (i + 1) % args.eval_every_iters == 0
+            )
+            if not should_eval:
+                print(
+                    "[ppo] iter {}/{} | timesteps={} | eval=skipped | "
+                    "next_eval_iter={}".format(
+                        i + 1,
+                        args.total_iters,
+                        model.num_timesteps,
+                        min(
+                            args.total_iters,
+                            ((i + 1) // args.eval_every_iters + 1)
+                            * args.eval_every_iters,
+                        ) if args.eval_every_iters > 0 else "disabled",
+                    )
+                )
+                continue
             # Evaluation
             obs, _ = eval_env.reset()
+            eval_reward = 0.0
             while True:
                 action, _state = model.predict(obs, deterministic=True)
                 obs, reward, done, _, info = eval_env.step(action)
+                eval_reward += reward
                 if done == True:
                     break
             log_dict = prefix_dict("eval", eval_env.env.get_statistics())
-            music_dict = prefix_dict("eval", eval_env.env.get_musical_metrics())
-            # wandb.log(log_dict | music_dict, step=i)
-            # if args.deepmimic:
-                # wandb.log(prefix_dict("eval", eval_env.env.get_deepmimic_rews()), step=i)
-            f1 = eval_env.env.get_musical_metrics()["f1"]
+            metrics = eval_env.env.get_musical_metrics()
+            music_dict = prefix_dict("eval", metrics)
+            f1 = metrics["f1"]
+            improved = f1 > best_f1
             if f1 > best_f1:
-                print("best_f1:{}->{}".format(best_f1, eval_env.env.get_musical_metrics()["f1"]))
-                best_f1 = eval_env.env.get_musical_metrics()["f1"]
-                model.save("./robopianist_rl/ckpts/{}_best".format(run_name))
-                # video = wandb.Video(str(eval_env.env.latest_filename), fps=4, format="mp4")
-                # wandb.log({"video": video, "global_step": i})
-            
-            eval_env.env.latest_filename.unlink()  
+                print("best_f1:{}->{}".format(best_f1, f1))
+                best_f1 = f1
+                model.save(str(best_model_path))
+            wandb_log = (
+                log_dict
+                | music_dict
+                | {
+                    "train/iter": last_iter,
+                    "train/timesteps": model.num_timesteps,
+                    "eval/reward": eval_reward,
+                    "eval/best_f1": best_f1,
+                    "eval/improved": improved,
+                }
+            )
+            if args.deepmimic:
+                wandb_log |= prefix_dict("eval", eval_env.env.get_deepmimic_rews())
+            wandb.log(wandb_log, step=last_iter)
+            print(
+                "[ppo] iter {}/{} | timesteps={} | eval_reward={:.2f} | "
+                "precision={:.4f} | recall={:.4f} | f1={:.4f} | "
+                "best_f1={:.4f} | improved={}".format(
+                    i + 1,
+                    args.total_iters,
+                    model.num_timesteps,
+                    eval_reward,
+                    metrics["precision"],
+                    metrics["recall"],
+                    f1,
+                    best_f1,
+                    improved,
+                )
+            )
     except KeyboardInterrupt:
         pass
 
     # model.save("./robopianist_rl/ckpts/{}".format(run_name))
 
-    # Evaluate the trained model
-    model = PPO.load("./robopianist_rl/ckpts/{}_best".format(run_name), env=vec_env)
+    # Evaluate the trained model and record the final video.
+    if best_f1 > -np.inf:
+        model = PPO.load(str(best_model_path), env=vec_env)
+    else:
+        print("[ppo] no eval checkpoint was saved; using the current model for final rollout")
+    final_eval_env = get_env(eval_args, record_dir=experiment_dir / "eval")
 
-    obs, _ = eval_env.reset()
+    obs, _ = final_eval_env.reset()
     actions = []
     rewards = 0
     while True:
         action, _states = model.predict(obs, deterministic=True)
         actions.append(action)
-        obs, reward, done, _, info = eval_env.step(action)
+        obs, reward, done, _, info = final_eval_env.step(action)
         rewards += reward
         if done:
             break
     print(f"Total reward: {rewards}")
-    print(eval_env.env.latest_filename)
-    print(eval_env.env.get_musical_metrics())
+    print(final_eval_env.env.latest_filename)
+    final_metrics = final_eval_env.env.get_musical_metrics()
+    print(final_metrics)
+    final_log = {
+        "train/iter": last_iter,
+        "train/timesteps": model.num_timesteps,
+        "final/reward": rewards,
+        **prefix_dict("final", final_metrics),
+    }
+    if args.mode != "disabled":
+        final_log["final/video"] = wandb.Video(
+            str(final_eval_env.env.latest_filename),
+            fps=round(1.0 / args.control_timestep),
+            format="mp4",
+        )
+    wandb.log(final_log, step=last_iter)
     actions = np.array(actions)
-    np.save("./trained_songs/{}/actions_{}".format(args.mimic_task, args.mimic_task), actions)
+    output_dir = Path("./trained_songs") / args.mimic_task
+    output_dir.mkdir(parents=True, exist_ok=True)
+    np.save(output_dir / f"actions_{args.mimic_task}", actions)
 
     del model # remove to demonstrate saving and loading
+    wandb.finish()
 
 if __name__ == "__main__":
     main(tyro.cli(Args, description=__doc__))

@@ -11,7 +11,6 @@ import math
 from dm_control import mjcf
 from dm_control.utils.rewards import tolerance
 from dm_control.mujoco.wrapper import mjbindings
-import random
 mjlib = mjbindings.mjlib
 
 _FINGERTIP_CLOSE_ENOUGH = 0.01
@@ -58,6 +57,15 @@ class ResidualWrapper(EnvironmentWrapper):
         self._external_demo = external_demo
         self.current_demo_lh = None
         self.current_demo_rh = None
+        self._episode_start_idx = 0
+        self._rng = np.random.default_rng()
+
+    @property
+    def episode_start_idx(self) -> int:
+        return self._episode_start_idx
+
+    def set_seed(self, seed: int) -> None:
+        self._rng = np.random.default_rng(seed)
 
     def observation_spec(self):
         return self._observation_spec
@@ -81,12 +89,8 @@ class ResidualWrapper(EnvironmentWrapper):
             else:
                 raise ValueError("External demo is enabled but no demo is provided.")
         else:
-            demo_lh = self._demonstrations_lh[self._reference_frame_idx:self._reference_frame_idx+self.task._n_steps_lookahead+1]
-            demo_rh = self._demonstrations_rh[self._reference_frame_idx:self._reference_frame_idx+self.task._n_steps_lookahead+1]
-            if self._reference_frame_idx + self.task._n_steps_lookahead >= self._demonstrations_length:
-                # Fill rest with the last frame
-                demo_lh = np.concatenate((demo_lh, self._demonstrations_lh[-1].reshape(1, 3, 6).repeat(self._reference_frame_idx + self.task._n_steps_lookahead - self._demonstrations_length + 1, axis=0)))
-                demo_rh = np.concatenate((demo_rh, self._demonstrations_rh[-1].reshape(1, 3, 6).repeat(self._reference_frame_idx + self.task._n_steps_lookahead - self._demonstrations_length + 1, axis=0)))
+            demo_lh = self._get_demo_window(self._demonstrations_lh)
+            demo_rh = self._get_demo_window(self._demonstrations_rh)
         demo_lh = np.transpose(demo_lh, (0, 2, 1)).flatten()
         demo_rh = np.transpose(demo_rh, (0, 2, 1)).flatten()
         demo = np.concatenate((demo_lh, demo_rh)).flatten()
@@ -99,6 +103,70 @@ class ResidualWrapper(EnvironmentWrapper):
     def set_current_demo(self, demonstrations_lh, demonstrations_rh):
         self.current_demo_lh = demonstrations_lh
         self.current_demo_rh = demonstrations_rh
+
+    def _initial_reference_frame(self) -> int:
+        return -int(round(self._environment.task._initial_buffer_time /
+                          self._environment.task.control_timestep))
+
+    def _reference_to_task_idx(self, reference_frame_idx: int) -> int:
+        return int(max(0, round(reference_frame_idx / self._step_scale)))
+
+    def _sample_rsi_reference_frame(self) -> int:
+        max_demo_idx = self._demonstrations_length - 1
+        max_task_idx = max(0, len(self.task._notes) - 1)
+        max_reference_idx = min(max_demo_idx, int(max_task_idx * self._step_scale))
+        return int(self._rng.integers(0, max_reference_idx + 1))
+
+    def _set_episode_start(self, reference_frame_idx: int) -> None:
+        self._reference_frame_idx = reference_frame_idx
+        self._episode_start_idx = self._reference_to_task_idx(reference_frame_idx)
+        self.task._t_idx = self._episode_start_idx
+        self.task._episode_start_idx = self._episode_start_idx
+        if hasattr(self._environment, "_reference_frame_idx"):
+            self._environment._reference_frame_idx = reference_frame_idx
+        if hasattr(self._environment, "_episode_start_idx"):
+            self._environment._episode_start_idx = self._episode_start_idx
+
+    def _get_demo_window(self, demonstrations: np.ndarray) -> np.ndarray:
+        frames = []
+        for idx in range(self._reference_frame_idx,
+                         self._reference_frame_idx + self.task._n_steps_lookahead + 1):
+            clamped_idx = min(max(idx, 0), self._demonstrations_length - 1)
+            frames.append(demonstrations[clamped_idx])
+        return np.stack(frames, axis=0)
+
+    def _configure_hands_from_qpos(self, hand_qpos: np.ndarray) -> None:
+        right_qpos, left_qpos = np.split(hand_qpos, 2)
+        self.physics.bind(self.task.right_hand.joints).qpos = right_qpos
+        self.physics.bind(self.task.left_hand.joints).qpos = left_qpos
+
+        prior_action = self.qpos2ctrl(hand_qpos)
+        right_action, left_action = np.split(prior_action, 2)
+        self.physics.bind(self.task.right_hand.actuators).ctrl = right_action
+        self.physics.bind(self.task.left_hand.actuators).ctrl = left_action
+        self.physics.forward()
+
+    def _refresh_task_observation(self, timestep: dm_env.TimeStep) -> dm_env.TimeStep:
+        observation = collections.OrderedDict(timestep.observation)
+        if "goal" in observation:
+            self.task._update_goal_state()
+            observation["goal"] = self.task._goal_state.ravel()
+        if "fingering" in observation:
+            self.task._update_fingering_state()
+            observation["fingering"] = self.task._fingering_state.ravel()
+        hand_observables = [
+            ("rh_shadow_hand/joints_pos", self.task.right_hand.observables.joints_pos),
+            ("lh_shadow_hand/joints_pos", self.task.left_hand.observables.joints_pos),
+            ("rh_shadow_hand/joints_vel", self.task.right_hand.observables.joints_vel),
+            ("lh_shadow_hand/joints_vel", self.task.left_hand.observables.joints_vel),
+        ]
+        for key, observable in hand_observables:
+            if key in observation:
+                observation[key] = observable(self.physics).copy()
+        timestep = timestep._replace(observation=observation)
+        if hasattr(self._environment, "_add_demo_observation"):
+            timestep = self._environment._add_demo_observation(timestep)
+        return timestep
 
     def _get_prior_action(self) -> np.ndarray:
         if self._external_demo:
@@ -184,17 +252,10 @@ class ResidualWrapper(EnvironmentWrapper):
         timestep = self._environment.reset()
         self._mimic_reward = 0
         if self._rsi:
-            self._reference_frame_idx = random.randint(-int(round(self._environment.task._initial_buffer_time/
-                                               self._environment.task.control_timestep)), self._demonstrations_length-1)
-            self._environment._reference_frame_idx = self._reference_frame_idx
-            self._environment.task._t_idx = int(self._reference_frame_idx/self._step_scale)
+            self._set_episode_start(self._sample_rsi_reference_frame())
             reference_joint_pos = self._get_prior_action()
-            action = self.qpos2ctrl(reference_joint_pos)
-            self._environment.task.right_hand.configure_joints(self.physics, action[:27])
-            self._environment.task.left_hand.configure_joints(self.physics, action[27:])
-        else: 
-            self._reference_frame_idx = -int(round(self._environment.task._initial_buffer_time/
-                                               self._environment.task.control_timestep))
+            self._configure_hands_from_qpos(reference_joint_pos)
+        else:
+            self._set_episode_start(self._initial_reference_frame())
+        timestep = self._refresh_task_observation(timestep)
         return self._add_demo_observation(self._add_prior_action_observation(timestep))
-
-    

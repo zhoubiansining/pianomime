@@ -42,7 +42,7 @@ class Dm2GymWrapper(gym.Env):
         self.viewer = None
         self.physics = self.env.physics
         self.task = self.env.task
-    
+
     def seed(self, seed):
         self.observation_space.seed(seed)
         self.action_space.seed(seed)
@@ -58,6 +58,8 @@ class Dm2GymWrapper(gym.Env):
     def reset(self, seed=None):
         if seed is not None:
             self.seed(seed)
+            if hasattr(self.env, "set_seed"):
+                self.env.set_seed(seed)
         timestep = self.env.reset()
         return timestep.observation, None
     
@@ -79,5 +81,3 @@ class Dm2GymWrapper(gym.Env):
             self.viewer.close()
             self.viewer = None
         return self.env.close()
-    
-    

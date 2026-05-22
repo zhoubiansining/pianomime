@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WANDB_DIR=/workspace/lwk/code/pianomime/ MUJOCO_GL=egl XLA_PYTHON_CLIENT_PREALLOCATE=false CUDA_VISIBLE_DEVICES=0 MUJOCO_EGL_DEVICE_ID=0 python pianomime/single_task/train_ppo.py \
+WANDB_DIR=/workspace/lwk/code/pianomime/ MUJOCO_GL=egl XLA_PYTHON_CLIENT_PREALLOCATE=false CUDA_VISIBLE_DEVICES=1 MUJOCO_EGL_DEVICE_ID=0 python pianomime/single_task/train_ppo.py \
     --root-dir /workspace/lwk/code/pianomime/robopianist_rl/video/ \
     --warmstart-steps 5000 \
     --max-steps 1000000 \
@@ -28,5 +28,4 @@ WANDB_DIR=/workspace/lwk/code/pianomime/ MUJOCO_GL=egl XLA_PYTHON_CLIENT_PREALLO
     --total-iters 2000 \
     --residual-factor 0.03 \
     --deepmimic \
-    --rsi \
-    --name "test_wandb" \
+    --name "baseline" \
