@@ -20,6 +20,7 @@
 
 - `docs/BASELINE_RESULTS.md`
 - `docs/BASELINE_RESULTS_zh.md`
+- `docs/BASELINE_REPORT_MATERIALS_zh.md`
 
 ### 快速开始
 
