@@ -81,13 +81,14 @@ PDF 要求提供 F1 training curve。Released checkpoints 不包含 training log
 | Iterations | 2000 |
 | Environment steps | 1,024,000 |
 | Best recorded F1 | 0.795686 |
-| Final rollout F1 | 0.795686 |
+| Best-checkpoint rollout F1 | 0.795686 |
+| Last evaluation F1 | 0.686684 |
 | Curve image | `/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/Petrunko_3_ppo_curve_20260513_135059/eval_f1_curve.png` |
 | Metrics CSV | `/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/Petrunko_3_ppo_curve_20260513_135059/eval_metrics.csv` |
 | Final rollout video | `/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/Petrunko_3_ppo_curve_20260513_135059/eval/02001.mp4` |
 | Training log | `/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/Petrunko_3_ppo_curve_20260513_135059.log` |
 
-注意：这条 PPO run 属于 residual single-song 路径。它的 prior action 来自 stored song demonstration trajectory 经过 IK/QP 的结果，不来自 generalist diffusion checkpoint。
+注意：这条 PPO run 属于 residual single-song 路径。它的 prior action 来自 stored song demonstration trajectory 经过 IK/QP 的结果，不来自 generalist diffusion checkpoint。`02001.mp4` 是 best checkpoint rollout，因此对应 best recorded F1。
 
 ## Generalist Diffusion Baseline
 

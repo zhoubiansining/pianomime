@@ -11,6 +11,9 @@ scripts, headless-server fixes, baseline result logging, and maintenance notes.
 - Chinese overview: `COURSE_BASELINE_zh.md`
 - Full reproduced result index: `docs/BASELINE_RESULTS.md`
 - Chinese result index: `docs/BASELINE_RESULTS_zh.md`
+- Report-ready baseline LaTeX snippet: `docs/BASELINE_REPORT_SECTION.tex`
+- Chinese report materials guide: `docs/BASELINE_REPORT_MATERIALS_zh.md`
+- Chinese report asset manifest: `docs/REPORT_ASSETS_MANIFEST_zh.md`
 - Detailed code-change summary: `docs/CODE_MODIFICATION_SUMMARY.md`
 - Chinese code-change summary: `docs/CODE_MODIFICATION_SUMMARY_zh.md`
 - Configuration guide: `docs/CONFIGURATION.md`

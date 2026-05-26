@@ -8,6 +8,9 @@
 
 - 完整 baseline 结果索引：`docs/BASELINE_RESULTS_zh.md`
 - 报告/展示材料清单：`docs/BASELINE_REPORT_MATERIALS_zh.md`
+- 可直接粘贴到报告的 LaTeX 小节：`docs/BASELINE_REPORT_SECTION.tex`
+- 报告图片资产清单：`docs/REPORT_ASSETS_MANIFEST_zh.md`
+- 后续工作提纲：`docs/NEXT_STEPS_zh.md`
 - 代码修改详细说明：`docs/CODE_MODIFICATION_SUMMARY_zh.md`
 - 使用和环境配置说明：`docs/USAGE_zh.md`
 - 集中配置说明：`docs/CONFIGURATION_zh.md`

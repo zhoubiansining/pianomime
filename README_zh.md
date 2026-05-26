@@ -21,6 +21,9 @@
 - `docs/BASELINE_RESULTS.md`
 - `docs/BASELINE_RESULTS_zh.md`
 - `docs/BASELINE_REPORT_MATERIALS_zh.md`
+- `docs/BASELINE_REPORT_SECTION.tex`
+- `docs/REPORT_ASSETS_MANIFEST_zh.md`
+- `docs/NEXT_STEPS_zh.md`
 
 ### 快速开始
 

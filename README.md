@@ -24,6 +24,9 @@ generalist evaluation videos. Exact metrics and output paths are indexed in:
 
 - `docs/BASELINE_RESULTS.md`
 - `docs/BASELINE_RESULTS_zh.md`
+- `docs/BASELINE_REPORT_SECTION.tex`
+- `docs/BASELINE_REPORT_MATERIALS_zh.md`
+- `docs/REPORT_ASSETS_MANIFEST_zh.md`
 
 ### Quick Start
 

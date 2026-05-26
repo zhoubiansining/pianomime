@@ -90,7 +90,8 @@ baseline hyperparameters and extra logging.
 | Iterations | 2000 |
 | Environment steps | 1,024,000 |
 | Best recorded F1 | 0.795686 |
-| Final rollout F1 | 0.795686 |
+| Best-checkpoint rollout F1 | 0.795686 |
+| Last evaluation F1 | 0.686684 |
 | Curve image | `/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/Petrunko_3_ppo_curve_20260513_135059/eval_f1_curve.png` |
 | Metrics CSV | `/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/Petrunko_3_ppo_curve_20260513_135059/eval_metrics.csv` |
 | Final rollout video | `/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/Petrunko_3_ppo_curve_20260513_135059/eval/02001.mp4` |
@@ -98,7 +99,8 @@ baseline hyperparameters and extra logging.
 
 Interpretation note: this PPO run is the residual single-song path. Its prior
 action comes from the stored song demonstration trajectory through IK/QP, not
-from the generalist diffusion checkpoint.
+from the generalist diffusion checkpoint. `02001.mp4` is generated from the
+best checkpoint and therefore corresponds to the best recorded F1.
 
 ## Generalist Diffusion Baseline
 

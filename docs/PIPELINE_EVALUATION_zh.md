@@ -131,7 +131,7 @@ Single-song replay：
 
 Single-song PPO residual：
 
-| Song | Iterations | Best/Final F1 |
+| Song | Iterations | Best-checkpoint rollout F1 |
 | --- | ---: | ---: |
 | `Petrunko_3` | 2000 | 0.795686 |
 

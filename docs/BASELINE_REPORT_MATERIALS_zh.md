@@ -39,7 +39,8 @@ For the single-song baseline, we replayed the provided song-specific demonstrati
 | Iterations | 2000 |
 | Environment steps | 1,024,000 |
 | Best recorded F1 | 0.795686 |
-| Final rollout F1 | 0.795686 |
+| Best-checkpoint rollout F1 | 0.795686 |
+| Last evaluation F1 | 0.686684 |
 
 建议正文表述：
 
@@ -86,6 +87,8 @@ For the generalist baseline, we evaluated the released two-stage diffusion polic
 ```text
 /home/gaoj/share4/_piano/baseline_results/single_song/training_runs/Petrunko_3_ppo_curve_20260513_135059/eval/02001.mp4
 ```
+
+这条视频由 best checkpoint 生成，因此它的 F1 对应 best recorded F1，而不是训练曲线最后一个 evaluation 点。
 
 ### Generalist videos
 
