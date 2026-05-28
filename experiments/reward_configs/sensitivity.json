@@ -1,0 +1,25 @@
+{
+  "_comment": "Sensitivity analysis: sweep coefficient values for each reward term. Each variant below overrides the built-in default coefficient. Use with: VARIANTS='timing_0.1 timing_0.5 timing_1.0 timing_2.0' REWARD_CONFIG=experiments/reward_configs/sensitivity.json bash experiments/run_reward_sweep.sh",
+
+  "timing_0.1":  { "reward_timing": true, "reward_timing_coef": 0.1 },
+  "timing_0.5":  { "reward_timing": true, "reward_timing_coef": 0.5 },
+  "timing_1.0":  { "reward_timing": true, "reward_timing_coef": 1.0 },
+  "timing_2.0":  { "reward_timing": true, "reward_timing_coef": 2.0 },
+
+  "prep_0.1":    { "reward_prepositioning": true, "reward_prepositioning_coef": 0.1 },
+  "prep_0.3":    { "reward_prepositioning": true, "reward_prepositioning_coef": 0.3 },
+  "prep_0.5":    { "reward_prepositioning": true, "reward_prepositioning_coef": 0.5 },
+  "prep_1.0":    { "reward_prepositioning": true, "reward_prepositioning_coef": 1.0 },
+
+  "vel_sm_0.001": { "reward_velocity_smoothness": true, "reward_velocity_smoothness_coef": 0.001 },
+  "vel_sm_0.01":  { "reward_velocity_smoothness": true, "reward_velocity_smoothness_coef": 0.01 },
+  "vel_sm_0.1":   { "reward_velocity_smoothness": true, "reward_velocity_smoothness_coef": 0.1 },
+
+  "act_sm_0.001": { "reward_action_smoothness": true, "reward_action_smoothness_coef": 0.001 },
+  "act_sm_0.01":  { "reward_action_smoothness": true, "reward_action_smoothness_coef": 0.01 },
+  "act_sm_0.1":   { "reward_action_smoothness": true, "reward_action_smoothness_coef": 0.1 },
+
+  "fdist_0.1":   { "reward_finger_key_distance": true, "reward_finger_key_distance_coef": 0.1 },
+  "fdist_0.5":   { "reward_finger_key_distance": true, "reward_finger_key_distance_coef": 0.5 },
+  "fdist_1.0":   { "reward_finger_key_distance": true, "reward_finger_key_distance_coef": 1.0 }
+}

@@ -1,0 +1,41 @@
+{
+  "_comment": "Reward variant coefficient overrides. Each key is a variant name. If the name matches a built-in variant, its coefficients are merged (overridden). If it's a new name, it defines a new variant. Use with: REWARD_CONFIG=experiments/reward_configs/sensitivity.json bash experiments/run_reward_sweep.sh",
+
+  "_builtin_defaults_for_reference": {
+    "vel_smooth":    { "reward_velocity_smoothness_coef": 0.01 },
+    "action_smooth": { "reward_action_smoothness_coef": 0.01 },
+    "preposition":   { "reward_prepositioning_coef": 0.3, "reward_prepositioning_lookahead": 5 },
+    "timing":        { "reward_timing_coef": 0.5 },
+    "finger_dist":   { "reward_finger_key_distance_coef": 0.5 },
+    "collision":     { "reward_finger_collision_coef": 0.5 }
+  },
+
+  "vel_smooth": {
+    "reward_velocity_smoothness_coef": 0.01
+  },
+  "action_smooth": {
+    "reward_action_smoothness_coef": 0.01
+  },
+  "preposition": {
+    "reward_prepositioning_coef": 0.3,
+    "reward_prepositioning_lookahead": 5
+  },
+  "timing": {
+    "reward_timing_coef": 0.5
+  },
+  "finger_dist": {
+    "reward_finger_key_distance_coef": 0.5
+  },
+  "collision": {
+    "reward_finger_collision_coef": 0.5
+  },
+
+  "full_combo": {
+    "reward_velocity_smoothness_coef": 0.01,
+    "reward_action_smoothness_coef": 0.01,
+    "reward_prepositioning_coef": 0.3,
+    "reward_prepositioning_lookahead": 5,
+    "reward_finger_key_distance_coef": 0.5,
+    "reward_finger_collision_coef": 0.5
+  }
+}

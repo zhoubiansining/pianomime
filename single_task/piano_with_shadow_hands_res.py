@@ -81,7 +81,7 @@ class PianoWithShadowHandsResidual(base.PianoTask):
         reward_finger_collision_coef: float = 0.5,
         reward_timing: bool = False,
         reward_timing_coef: float = 0.5,
-        reward_finger_key_distance: bool = True,
+        reward_finger_key_distance: bool = False,
         reward_finger_key_distance_coef: float = 0.5,
         **kwargs,
     ) -> None:
@@ -193,6 +193,8 @@ class PianoWithShadowHandsResidual(base.PianoTask):
             energy_reward=self._compute_energy_reward,
         )
         if not self._disable_fingering_reward:
+            self._reward_fn.add("fingering_reward", self._compute_fingering_reward)
+        if not self._disable_forearm_reward:
             self._reward_fn.add("forearm_reward", self._compute_forearm_reward)
         # ============ NEW: Reward Shaping Rewards ============
         if self._reward_velocity_smoothness:
@@ -431,7 +433,7 @@ class PianoWithShadowHandsResidual(base.PianoTask):
             margin=(_FINGER_CLOSE_ENOUGH_TO_KEY * 10),
             sigmoid="gaussian",
         )
-        return float(np.mean(rews))
+        return 0.0
 
     # ============ NEW: Reward Shaping Methods ============
 
