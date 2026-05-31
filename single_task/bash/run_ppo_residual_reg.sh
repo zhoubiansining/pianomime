@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WANDB_DIR=/workspace/lwk/code/pianomime/ MUJOCO_GL=egl XLA_PYTHON_CLIENT_PREALLOCATE=false CUDA_VISIBLE_DEVICES=1 MUJOCO_EGL_DEVICE_ID=0 python pianomime/single_task/train_ppo.py \
+WANDB_DIR=/workspace/lwk/code/pianomime/ MUJOCO_GL=egl XLA_PYTHON_CLIENT_PREALLOCATE=false CUDA_VISIBLE_DEVICES=0 MUJOCO_EGL_DEVICE_ID=0 python pianomime/single_task/train_ppo.py \
     --root-dir /workspace/lwk/code/pianomime/robopianist_rl/video/ \
     --warmstart-steps 5000 \
     --max-steps 1000000 \
@@ -17,15 +17,19 @@ WANDB_DIR=/workspace/lwk/code/pianomime/ MUJOCO_GL=egl XLA_PYTHON_CLIENT_PREALLO
     --camera-id "piano/back" \
     --midi-start-from 0 \
     --residual-action \
+    --residual-action-regularization \
+    --residual-l2-coef 1e-3 \
+    --residual-smooth-coef 1e-2 \
     --frame-stack 4 \
     --num-envs 32 \
     --initial-lr 3e-4 \
     --lr-decay-rate 0.999 \
     --n-steps 512 \
-    --mimic-task "Stan_1" \
-    --environment-name "Stan_1" \
+    --mimic-task "Pirates_2" \
+    --environment-name "Pirates_2" \
+    --project "robopianist-Pirates_2" \
     --use-note-trajectory \
     --total-iters 2000 \
     --residual-factor 0.03 \
     --deepmimic \
-    --name "baseline" \
+    --name "residual_reg"

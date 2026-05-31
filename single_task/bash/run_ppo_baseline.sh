@@ -22,11 +22,11 @@ WANDB_DIR=/workspace/lwk/code/pianomime/ MUJOCO_GL=egl XLA_PYTHON_CLIENT_PREALLO
     --initial-lr 3e-4 \
     --lr-decay-rate 0.999 \
     --n-steps 512 \
-    --mimic-task "Stan_1" \
-    --environment-name "Stan_1" \
+    --mimic-task "Petrunko_3" \
+    --environment-name "Petrunko_3" \
+    --project "robopianist-Petrunko_3" \
     --use-note-trajectory \
     --total-iters 2000 \
     --residual-factor 0.03 \
     --deepmimic \
-    --rsi \
-    --name "test_wandb" \
+    --name "baseline" \

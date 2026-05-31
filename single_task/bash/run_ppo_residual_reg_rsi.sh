@@ -1,0 +1,35 @@
+#!/bin/bash
+
+WANDB_DIR=/workspace/lwk/code/pianomime/ MUJOCO_GL=egl XLA_PYTHON_CLIENT_PREALLOCATE=false CUDA_VISIBLE_DEVICES=1 MUJOCO_EGL_DEVICE_ID=0 python pianomime/single_task/train_ppo.py \
+    --root-dir /workspace/lwk/code/pianomime/robopianist_rl/video/ \
+    --warmstart-steps 5000 \
+    --max-steps 1000000 \
+    --discount 0.99 \
+    --trim-silence \
+    --gravity-compensation \
+    --control-timestep 0.05 \
+    --n-steps-lookahead 0 \
+    --disable_fingering_reward \
+    --disable_hand_collisions \
+    --disable_forearm_reward \
+    --tqdm-bar \
+    --eval-episodes 1 \
+    --camera-id "piano/back" \
+    --midi-start-from 0 \
+    --residual-action \
+    --residual-action-regularization \
+    --residual-l2-coef 1e-3 \
+    --residual-smooth-coef 1e-2 \
+    --frame-stack 4 \
+    --num-envs 32 \
+    --initial-lr 3e-4 \
+    --lr-decay-rate 0.999 \
+    --n-steps 512 \
+    --mimic-task "Stan_1" \
+    --environment-name "Stan_1" \
+    --use-note-trajectory \
+    --total-iters 2000 \
+    --residual-factor 0.03 \
+    --deepmimic \
+    --name "residual_reg_rsi" \
+    --rsi \

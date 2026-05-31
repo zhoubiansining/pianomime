@@ -31,6 +31,7 @@ from stable_baselines3.common.monitor import Monitor
 
 import pickle
 import shutil
+from residual_regularized_ppo import ResidualRegularizedPPO
 
 
 @dataclass(frozen=True)
@@ -83,6 +84,11 @@ class Args:
     initial_lr: float = 3e-4
     lr_decay_rate: float = 0.99
     residual_factor: float = 0.02
+    residual_action_regularization: bool = False
+    residual_l2_coef: float = 0.0
+    residual_smooth_coef: float = 0.0
+    residual_regularization_action_dim: Optional[int] = None
+    residual_regularization_exclude_sustain: bool = True
     n_steps: int = 512
     use_note_trajectory: bool = False
     mimic_z_axis: bool = False
@@ -95,6 +101,16 @@ def prefix_dict(prefix: str, d: dict) -> dict:
     return {f"{prefix}/{k}": v for k, v in d.items()}
 
 def main(args: Args) -> None:
+    if args.residual_l2_coef < 0.0 or args.residual_smooth_coef < 0.0:
+        raise ValueError("Residual regularization coefficients must be non-negative.")
+    if args.residual_action_regularization and not args.residual_action:
+        raise ValueError("--residual-action-regularization requires --residual-action.")
+    if (
+        not args.residual_action_regularization
+        and (args.residual_l2_coef > 0.0 or args.residual_smooth_coef > 0.0)
+    ):
+        print("[ppo] residual regularization coefficients are set but the feature is disabled; ignoring them.")
+
     timestamp = datetime.now().strftime("%m%d_%H%M%S")
     run_name_parts = ["PPO", args.environment_name, str(args.seed)]
     if args.name:
@@ -144,20 +160,37 @@ def main(args: Args) -> None:
 
     policy_kwargs = dict(activation_fn=torch.nn.GELU,
                      net_arch=dict(pi=[1024, 256], vf=[1024, 256]))
-    model = PPO("MlpPolicy", 
-                vec_env, 
-                n_epochs=10,
-                n_steps=args.n_steps,
-                batch_size=1024,
-                learning_rate=lr_scheduler_instance.lr_schedule,
-                policy_kwargs=policy_kwargs, 
-                verbose=2,
-                tensorboard_log="./robopianist_rl/tensorboard/{}".format(run_name),
-                )
+    ppo_cls = ResidualRegularizedPPO if args.residual_action_regularization else PPO
+    model_kwargs = {}
+    if args.residual_action_regularization:
+        model_kwargs = {
+            "residual_action_regularization": True,
+            "residual_l2_coef": args.residual_l2_coef,
+            "residual_smooth_coef": args.residual_smooth_coef,
+            "residual_regularization_action_dim": args.residual_regularization_action_dim,
+            "residual_regularization_exclude_sustain": args.residual_regularization_exclude_sustain,
+        }
+        print(
+            "[ppo] residual action regularization enabled | "
+            f"l2_coef={args.residual_l2_coef} | "
+            f"smooth_coef={args.residual_smooth_coef} | "
+            f"action_dim={args.residual_regularization_action_dim or 'auto'}"
+        )
+    model = ppo_cls("MlpPolicy",
+                    vec_env,
+                    n_epochs=10,
+                    n_steps=args.n_steps,
+                    batch_size=1024,
+                    learning_rate=lr_scheduler_instance.lr_schedule,
+                    policy_kwargs=policy_kwargs,
+                    verbose=2,
+                    tensorboard_log="./robopianist_rl/tensorboard/{}".format(run_name),
+                    **model_kwargs,
+                    )
     if args.pretrained is not None:
         # Reload learning rate scheduler
         custom_objects = { 'learning_rate': lr_scheduler_instance.lr_schedule}
-        model = PPO.load(args.pretrained, env=vec_env, custom_objects=custom_objects)
+        model = ppo_cls.load(args.pretrained, env=vec_env, custom_objects=custom_objects, **model_kwargs)
     best_f1 = -np.inf
     best_model_path = Path("./robopianist_rl/ckpts") / f"{run_name}_best"
     best_model_path.parent.mkdir(parents=True, exist_ok=True)
@@ -244,7 +277,7 @@ def main(args: Args) -> None:
 
     # Evaluate the trained model and record the final video.
     if best_f1 > -np.inf:
-        model = PPO.load(str(best_model_path), env=vec_env)
+        model = ppo_cls.load(str(best_model_path), env=vec_env)
     else:
         print("[ppo] no eval checkpoint was saved; using the current model for final rollout")
     final_eval_env = get_env(eval_args, record_dir=experiment_dir / "eval")
