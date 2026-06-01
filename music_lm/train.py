@@ -31,6 +31,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--grad-clip", type=float, default=1.0)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument("--allow-tf32", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--num-workers", type=int, default=0)
     return parser.parse_args()
 
@@ -85,6 +86,11 @@ def main() -> None:
     args = parse_args()
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
+
+    if args.allow_tf32 and torch.cuda.is_available():
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+        torch.set_float32_matmul_precision("high")
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     train_tokens = load_tokens(args.data_dir / "train.bin")

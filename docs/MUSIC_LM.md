@@ -57,6 +57,39 @@ MAX_STEPS=1000 DEVICE=cpu bash scripts/train_music_lm.sh
 
 The trainer writes `best.pt`, `latest.pt`, and `train_log.jsonl`.
 
+## A100 Launch
+
+On an A100/CUDA node, use the dedicated launcher:
+
+```bash
+bash scripts/train_music_lm_a100.sh
+```
+
+The launcher checks that CUDA is available, enables CUDA training through
+`DEVICE=cuda`, and uses the Music LM virtualenv from `configs/baseline.toml`.
+If the virtualenv is missing, it creates it automatically.
+
+If `artifacts/maestro_tokens/train.bin` is already present, training starts
+immediately. If the node does not have tokenized MAESTRO yet, either copy
+`artifacts/maestro_tokens` onto the node or let the launcher download and
+tokenize MAESTRO:
+
+```bash
+A100_DOWNLOAD_MAESTRO=1 bash scripts/train_music_lm_a100.sh
+```
+
+Useful overrides:
+
+```bash
+MAX_STEPS=1000 bash scripts/train_music_lm_a100.sh
+CUDA_VISIBLE_DEVICES=0 bash scripts/train_music_lm_a100.sh
+```
+
+The default model has 3,370,752 trainable parameters. Raw fp32 weights are about
+13.5 MB. The current checkpoint format stores model weights plus small config
+metadata, not optimizer state, so `best.pt` / `latest.pt` are expected to be
+about 16-18 MB each. Keeping both files costs roughly 32-36 MB.
+
 ## Evaluate MIDI
 
 ```bash

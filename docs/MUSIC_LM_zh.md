@@ -90,6 +90,37 @@ artifacts/music_lm/small_gpt/
 
 `best.pt` 会保存模型权重、GPT config 和 tokenizer config。
 
+## A100 一键启动
+
+在 A100/CUDA 节点上使用专用启动脚本：
+
+```bash
+bash scripts/train_music_lm_a100.sh
+```
+
+这个脚本会检查 CUDA 是否可用，把训练设备设为 `DEVICE=cuda`，并使用
+`configs/baseline.toml` 里配置的 Music LM virtualenv。如果 virtualenv 不存在，
+脚本会自动创建并安装依赖。
+
+如果 `artifacts/maestro_tokens/train.bin` 已经存在，脚本会直接开始训练。如果
+A100 节点还没有 tokenized MAESTRO，可以先把本地的 `artifacts/maestro_tokens`
+复制过去，或者让脚本自动下载并 tokenize：
+
+```bash
+A100_DOWNLOAD_MAESTRO=1 bash scripts/train_music_lm_a100.sh
+```
+
+常用覆盖参数：
+
+```bash
+MAX_STEPS=1000 bash scripts/train_music_lm_a100.sh
+CUDA_VISIBLE_DEVICES=0 bash scripts/train_music_lm_a100.sh
+```
+
+默认模型参数量是 3,370,752。纯 fp32 权重大约 13.5 MB。当前 checkpoint 只保存
+模型权重和少量 config，不保存 optimizer state，所以 `best.pt` / `latest.pt`
+预计各约 16-18 MB；两个都保留大约占 32-36 MB。
+
 ## 作为 evaluation metric
 
 对任意 MIDI 文件打分：
