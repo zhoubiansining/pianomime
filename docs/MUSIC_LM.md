@@ -90,6 +90,31 @@ The default model has 3,370,752 trainable parameters. Raw fp32 weights are about
 metadata, not optimizer state, so `best.pt` / `latest.pt` are expected to be
 about 16-18 MB each. Keeping both files costs roughly 32-36 MB.
 
+## Current Trained Checkpoint
+
+The repository includes the A100-trained checkpoint at:
+
+```text
+artifacts/music_lm/small_gpt/best.pt
+```
+
+Training summary:
+
+```text
+step: 19000
+best_validation_loss: 1.784455587863922
+checkpoint_size: 16.88 MiB
+sha256: 0e88246634ebf525271e76d89fdbe47cfb9b58d9eee4756fe748858917749d8e
+```
+
+Smoke-test evaluation on `tutorial/Stan_1.mid`:
+
+```text
+tokens: 914
+log_ppl: 4.2667458274147725
+ppl: 71.2892701570504
+```
+
 ## Evaluate MIDI
 
 ```bash

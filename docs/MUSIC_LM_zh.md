@@ -121,6 +121,31 @@ CUDA_VISIBLE_DEVICES=0 bash scripts/train_music_lm_a100.sh
 模型权重和少量 config，不保存 optimizer state，所以 `best.pt` / `latest.pt`
 预计各约 16-18 MB；两个都保留大约占 32-36 MB。
 
+## 当前已训练 checkpoint
+
+仓库已包含 A100 训练产物：
+
+```text
+artifacts/music_lm/small_gpt/best.pt
+```
+
+训练摘要：
+
+```text
+step: 19000
+best_validation_loss: 1.784455587863922
+checkpoint_size: 16.88 MiB
+sha256: 0e88246634ebf525271e76d89fdbe47cfb9b58d9eee4756fe748858917749d8e
+```
+
+在 `tutorial/Stan_1.mid` 上的 smoke-test evaluation：
+
+```text
+tokens: 914
+log_ppl: 4.2667458274147725
+ppl: 71.2892701570504
+```
+
 ## 作为 evaluation metric
 
 对任意 MIDI 文件打分：
