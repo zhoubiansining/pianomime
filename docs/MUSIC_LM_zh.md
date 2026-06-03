@@ -186,15 +186,12 @@ bonus = -weight * (window_log_ppl - reference_log_ppl)
 同一套 PPO 配置和同样训练预算下的 PPO A/B：
 
 ```bash
-python scripts/run_ppo_from_config.py Petrunko_3 \
-  --run-name Petrunko_3_no_music_lm_seed42
-
-bash scripts/run_ppo_with_music_lm.sh Petrunko_3 \
-  Petrunko_3_with_music_lm_seed42
+CONFIG_PYTHON=.venv_music_lm/bin/python \
+bash scripts/run_music_lm_ablation.sh Petrunko_3
 ```
 
-两个 run 都会写 `eval_metrics.csv`。不加 LM 的 run 记录 note/sustain 指标；
-加 Music LM 的 run 记录相同指标，并额外记录：
+脚本会先跑 no-LM，再跑 with-LM，并汇总两个 `eval_metrics.csv`。不加 LM 的
+run 记录 note/sustain 指标；加 Music LM 的 run 记录相同指标，并额外记录：
 
 ```text
 music_lm_log_ppl
@@ -203,6 +200,13 @@ music_lm_ppl
 
 成功标准应该是：F1 提升或至少不下降，同时 Music LM PPL 下降。只有 PPL 降低
 但 F1 下降，不能算控制效果提升。
+
+只检查启动命令、不真正训练：
+
+```bash
+DRY_RUN=1 CONFIG_PYTHON=.venv_music_lm/bin/python \
+bash scripts/run_music_lm_ablation.sh Petrunko_3
+```
 
 当前本地验证只能证明训练好的 checkpoint 能提供有效 reward/evaluation signal。
 在 `tutorial/Stan_1.mid` 上，A100 checkpoint 对干净 MIDI 和破坏 token stream

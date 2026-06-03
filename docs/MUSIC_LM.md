@@ -146,15 +146,13 @@ The meaningful control comparison is not "short-trained LM versus A100 LM"; it
 is a PPO A/B run with the same song, seed, PPO config, and training budget:
 
 ```bash
-python scripts/run_ppo_from_config.py Petrunko_3 \
-  --run-name Petrunko_3_no_music_lm_seed42
-
-bash scripts/run_ppo_with_music_lm.sh Petrunko_3 \
-  Petrunko_3_with_music_lm_seed42
+CONFIG_PYTHON=.venv_music_lm/bin/python \
+bash scripts/run_music_lm_ablation.sh Petrunko_3
 ```
 
-Both runs write `eval_metrics.csv`. The no-LM run reports note/sustain metrics.
-The Music LM run reports those same metrics plus:
+The script runs no-LM first, then with-LM, and summarizes both
+`eval_metrics.csv` files. The no-LM run reports note/sustain metrics. The Music
+LM run reports those same metrics plus:
 
 ```text
 music_lm_log_ppl
@@ -163,6 +161,13 @@ music_lm_ppl
 
 The required success criterion is: F1 should improve or stay neutral while
 Music LM PPL decreases. A lower PPL alone is not enough if note F1 drops.
+
+For a launch check without training:
+
+```bash
+DRY_RUN=1 CONFIG_PYTHON=.venv_music_lm/bin/python \
+bash scripts/run_music_lm_ablation.sh Petrunko_3
+```
 
 Current local validation only proves that the trained checkpoint supplies a
 useful reward/evaluation signal. On `tutorial/Stan_1.mid`, the A100 checkpoint
