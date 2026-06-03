@@ -95,6 +95,31 @@ metrics_has_song() {
   [[ -f "$metrics" ]] && grep -q "^${song}," "$metrics"
 }
 
+task_in_list() {
+  local task="$1"
+  local item
+  shift
+  for item in "$@"; do
+    [[ "$item" == "$task" ]] && return 0
+  done
+  return 1
+}
+
+single_replay_artifacts_ready() {
+  local song="$1"
+  local missing=()
+  [[ -f "$RUNTIME_DIR/dataset/notes/${song}.pkl" ]] || missing+=("dataset/notes/${song}.pkl")
+  [[ -f "$RUNTIME_DIR/dataset/high_level_trajectories/${song}_left_hand_action_list.npy" ]] || missing+=("dataset/high_level_trajectories/${song}_left_hand_action_list.npy")
+  [[ -f "$RUNTIME_DIR/dataset/high_level_trajectories/${song}_right_hand_action_list.npy" ]] || missing+=("dataset/high_level_trajectories/${song}_right_hand_action_list.npy")
+  [[ -f "$RUNTIME_DIR/dataset/low_level_policies/${song}/actions_${song}.npy" ]] || missing+=("dataset/low_level_policies/${song}/actions_${song}.npy")
+
+  if ((${#missing[@]})); then
+    log "Skip single-song action replay for $song; missing artifacts: ${missing[*]}"
+    return 1
+  fi
+  return 0
+}
+
 append_csv_row() {
   local metrics="$1"
   local song="$2"
@@ -158,6 +183,9 @@ run_single_replay() {
   local song="$1"
   local metrics="$LOCAL_RESULTS_DIR/single_song/metrics.csv"
   local video="$LOCAL_RESULTS_DIR/single_song/videos/${song}_single_song_baseline.mp4"
+  if ! single_replay_artifacts_ready "$song"; then
+    return 0
+  fi
   if metrics_has_song "$metrics" "$song" && [[ -f "$video" ]]; then
     log "Skip single-song replay for $song; metrics/video already exist"
     return 0
@@ -224,6 +252,11 @@ run_multisong_eval() {
 
 run_ppo_training() {
   local song="$1"
+  if task_in_list "$song" $PPO_BLOCKED_TASKS; then
+    log "Skip PPO training for $song; listed in PPO_BLOCKED_TASKS. See docs/SINGLE_SONG_FOUR_BASELINE.md for the current blocker."
+    return 0
+  fi
+
   local run_name="${song}_ppo_curve_${RUN_ID}"
   local experiment_dir="$LOCAL_RESULTS_DIR/single_song/training_runs/${run_name}"
   local done_marker="$experiment_dir/.done"

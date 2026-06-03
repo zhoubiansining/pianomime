@@ -47,6 +47,7 @@ def emit_scheduler(cfg: dict) -> list[str]:
         shell_default("POLL_SECONDS", sched.get("poll_seconds")),
         shell_default("SKIP_RUNTIME_SYNC", sched.get("skip_runtime_sync")),
         shell_default("SINGLE_REPLAY_TASKS", single.get("replay_songs")),
+        shell_default("PPO_BLOCKED_TASKS", single.get("ppo_blocked_songs")),
         shell_default("MULTISONG_TASKS", multisong.get("songs")),
         shell_default("PPO_TASKS", single.get("ppo_songs")),
     ]

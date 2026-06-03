@@ -36,6 +36,19 @@ config = load_config(args.config)
 replay_config = section(config, "single_song", "replay")
 task_name = args.song_name
 
+required_artifacts = [
+    PROJECT_ROOT / "dataset" / "notes" / f"{task_name}.pkl",
+    PROJECT_ROOT / "dataset" / "high_level_trajectories" / f"{task_name}_left_hand_action_list.npy",
+    PROJECT_ROOT / "dataset" / "high_level_trajectories" / f"{task_name}_right_hand_action_list.npy",
+    PROJECT_ROOT / "dataset" / "low_level_policies" / task_name / f"actions_{task_name}.npy",
+]
+missing_artifacts = [path.relative_to(PROJECT_ROOT) for path in required_artifacts if not path.exists()]
+if missing_artifacts:
+    missing = "\n".join(f"  - {path}" for path in missing_artifacts)
+    raise FileNotFoundError(
+        f"Cannot run single-song action replay for {task_name}; missing required artifacts:\n{missing}"
+    )
+
 # start_from = start_from_dict.START_FROM[task_name]
 with (PROJECT_ROOT / "dataset" / "notes" / f"{task_name}.pkl").open("rb") as f:
     note_traj = pickle.load(f)

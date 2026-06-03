@@ -100,10 +100,18 @@ same command with the same `RUN_ID`.
 The default task set is maintained in `configs/baseline.toml`:
 
 ```text
-SINGLE_REPLAY_TASKS="Stan_1 Petrunko_3 NeverGonnaGiveYouUp_1"
+SINGLE_REPLAY_TASKS="TwinkleTwinkleRousseau Pirates_1 Stan_1 Petrunko_3"
 MULTISONG_TASKS="Alone_1 Numb_1 NoTimeToDie_1"
-PPO_TASKS="Petrunko_3"
+PPO_TASKS="TwinkleTwinkleRousseau Pirates_1 Stan_1 Petrunko_3"
+PPO_BLOCKED_TASKS="TwinkleTwinkleRousseau Pirates_1"
 ```
+
+See `docs/SINGLE_SONG_FOUR_BASELINE.md` for the current four-song single-song
+alignment status. `TwinkleTwinkleRousseau` and `Pirates_1` do not have
+same-protocol action-replay artifacts in the original release, and their
+residual PPO smoke tests currently fail. The scheduler records missing replay
+artifacts during preflight and uses `PPO_BLOCKED_TASKS` to skip known-failing
+PPO jobs without stopping other jobs.
 
 The completed baseline result suite also includes four additional unseen
 generalist songs:

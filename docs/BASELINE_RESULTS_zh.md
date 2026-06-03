@@ -1,6 +1,6 @@
 # PianoMime Baseline 结果
 
-最后更新：2026-05-18
+最后更新：2026-06-03
 
 本文档是 Dexterous Piano Track baseline 复现结果的主要索引。后续同学开始做改进之前，建议先读这里，确认 baseline 数字、视频、日志和训练曲线分别在哪里。
 
@@ -19,6 +19,7 @@ baseline_results/
   single_song/metrics.csv
   single_song/videos/
   single_song/training_runs/Petrunko_3_ppo_curve_20260513_135059/
+  single_song/training_runs/Stan_1_ppo_curve_20260603_110918/  # running
   multisong/metrics.csv
   multisong/videos/
   multisong/logs/
@@ -39,13 +40,24 @@ baseline_results/
 
 ## Single-Song Replay Baseline
 
-这三条视频对应 PDF 要求的 training-set single-song final performance videos。它们使用 provided single-song low-level action trajectories，并保持原始 PianoMime/RoboPianist evaluation wrappers。
+PDF 原始要求是从 training dataset 选 3 首并产出 final performance videos；这部分已经由旧三首 replay baseline 完成。后续同学的 single-song 改进统一改为四首集合：`TwinkleTwinkleRousseau`、`Pirates_1`、`Stan_1`、`Petrunko_3`。四首集合的完整状态见 `docs/SINGLE_SONG_FOUR_BASELINE_zh.md`。
+
+下面是目前已经有同口径 action replay artifacts 的曲目结果。它们使用 provided single-song low-level action trajectories，并保持原始 PianoMime/RoboPianist evaluation wrappers。
 
 | Song | Precision | Recall | F1 | Duration | Video |
 | --- | ---: | ---: | ---: | ---: | --- |
 | `Stan_1` | 0.9991 | 0.9719 | 0.9795 | 26.90 s | `/home/gaoj/share4/_piano/baseline_results/single_song/videos/Stan_1_single_song_baseline.mp4` |
 | `Petrunko_3` | 0.9869 | 0.8460 | 0.8900 | 30.05 s | `/home/gaoj/share4/_piano/baseline_results/single_song/videos/Petrunko_3_single_song_baseline.mp4` |
 | `NeverGonnaGiveYouUp_1` | 0.9960 | 0.9260 | 0.9514 | 28.00 s | `/home/gaoj/share4/_piano/baseline_results/single_song/videos/NeverGonnaGiveYouUp_1_single_song_baseline.mp4` |
+
+四首对齐集合状态：
+
+| Song | Action replay | PPO residual baseline |
+| --- | --- | --- |
+| `TwinkleTwinkleRousseau` | 原始 release 缺少 low-level actions，不能 replay | smoke test 因 MIDI/demo 长度不一致失败 |
+| `Pirates_1` | 原始 release 缺少 low-level actions，不能 replay | smoke test 因 IK/QP prior 初始化失败 |
+| `Stan_1` | 已完成，F1 0.9795 | 正在补跑：`Stan_1_ppo_curve_20260603_110918` |
+| `Petrunko_3` | 已完成，F1 0.8900 | 已完成，best F1 0.795686 |
 
 原始表格：
 

@@ -1,6 +1,6 @@
 # PianoMime Baseline Results
 
-Last updated: 2026-05-18
+Last updated: 2026-06-03
 
 This document is the main index for the reproduced Dexterous Piano Track
 baseline. It records the exact result files that classmates should inspect
@@ -21,6 +21,7 @@ baseline_results/
   single_song/metrics.csv
   single_song/videos/
   single_song/training_runs/Petrunko_3_ppo_curve_20260513_135059/
+  single_song/training_runs/Stan_1_ppo_curve_20260603_110918/  # running
   multisong/metrics.csv
   multisong/videos/
   multisong/logs/
@@ -43,15 +44,30 @@ note-level metrics are still valid.
 
 ## Single-Song Replay Baseline
 
-These are the three final performance videos requested for the training-set
-single-song baseline. They replay the provided single-song low-level action
-trajectories with the original PianoMime/RoboPianist evaluation wrappers.
+The original PDF requirement asks for three training-set songs with final
+performance videos; that part is complete with the replay baseline below.
+Downstream single-song improvements are now aligned on four songs:
+`TwinkleTwinkleRousseau`, `Pirates_1`, `Stan_1`, and `Petrunko_3`. See
+`docs/SINGLE_SONG_FOUR_BASELINE.md` for the full four-song status.
+
+The table below lists songs for which same-protocol action-replay artifacts are
+available. They replay the provided single-song low-level action trajectories
+with the original PianoMime/RoboPianist evaluation wrappers.
 
 | Song | Precision | Recall | F1 | Duration | Video |
 | --- | ---: | ---: | ---: | ---: | --- |
 | `Stan_1` | 0.9991 | 0.9719 | 0.9795 | 26.90 s | `/home/gaoj/share4/_piano/baseline_results/single_song/videos/Stan_1_single_song_baseline.mp4` |
 | `Petrunko_3` | 0.9869 | 0.8460 | 0.8900 | 30.05 s | `/home/gaoj/share4/_piano/baseline_results/single_song/videos/Petrunko_3_single_song_baseline.mp4` |
 | `NeverGonnaGiveYouUp_1` | 0.9960 | 0.9260 | 0.9514 | 28.00 s | `/home/gaoj/share4/_piano/baseline_results/single_song/videos/NeverGonnaGiveYouUp_1_single_song_baseline.mp4` |
+
+Four-song alignment status:
+
+| Song | Action replay | PPO residual baseline |
+| --- | --- | --- |
+| `TwinkleTwinkleRousseau` | missing released low-level actions | smoke test fails due MIDI/demo length mismatch |
+| `Pirates_1` | missing released low-level actions | smoke test fails during IK/QP prior initialization |
+| `Stan_1` | done, F1 0.9795 | running: `Stan_1_ppo_curve_20260603_110918` |
+| `Petrunko_3` | done, F1 0.8900 | done, best F1 0.795686 |
 
 Raw table:
 

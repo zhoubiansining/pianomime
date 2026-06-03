@@ -28,6 +28,7 @@ CONFIG_FILE=configs/my_method.toml bash scripts/run_ppo.sh Petrunko_3
 | `[single_song]` | Default single-song replay and PPO task lists |
 | `[single_song.replay]` | Replay baseline environment, video, and reward-wrapper parameters |
 | `[single_song.ppo]` | PPO residual baseline training hyperparameters and policy network shape |
+| `[single_song.ppo.song_overrides.<song>]` | Per-song PPO overrides, e.g. `TwinkleTwinkleRousseau` does not use a dataset note trajectory |
 | `[multisong]` | Default generalist baseline songs |
 | `[multisong.high_level]` | High-level diffusion evaluation parameters |
 | `[multisong.low_level]` | Low-level diffusion evaluation parameters |

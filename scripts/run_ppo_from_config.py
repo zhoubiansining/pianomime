@@ -36,6 +36,9 @@ def main() -> None:
     run_id = os.environ.get("RUN_ID", "manual")
     run_name = args.run_name or f"{song}_ppo_curve_{run_id}"
     root_dir = args.root_dir or ppo.pop("root_dir", None) or f"{paths['local_results_dir']}/single_song/training_runs"
+    song_overrides = ppo.pop("song_overrides", {})
+    if song in song_overrides:
+        ppo.update(song_overrides[song])
 
     command = [
         os.environ.get("PYTHON_BIN", paths.get("python_bin", sys.executable)),

@@ -18,15 +18,20 @@ configuration, and tmux automation for long runs.
 - Automated multi-job runner: `scripts/start_tmux_baseline.sh`
 - Central config for paths, tasks, and hyperparameters: `configs/baseline.toml`
 
-The reproduced baseline currently includes three training-set single-song
+The reproduced baseline currently includes training-set single-song replay
 videos, one `Petrunko_3` PPO F1 training curve, and seven unseen-song
-generalist evaluation videos. Exact metrics and output paths are indexed in:
+generalist evaluation videos. Downstream single-song work is aligned on
+`TwinkleTwinkleRousseau`, `Pirates_1`, `Stan_1`, and `Petrunko_3`; the first
+two songs expose artifact/IK mismatches under the original release artifacts,
+as documented in `docs/SINGLE_SONG_FOUR_BASELINE.md`. Exact metrics and output
+paths are indexed in:
 
 - `docs/BASELINE_RESULTS.md`
 - `docs/BASELINE_RESULTS_zh.md`
 - `docs/BASELINE_REPORT_SECTION.tex`
 - `docs/BASELINE_REPORT_MATERIALS_zh.md`
 - `docs/REPORT_ASSETS_MANIFEST_zh.md`
+- `docs/SINGLE_SONG_FOUR_BASELINE.md`
 
 ### Quick Start
 

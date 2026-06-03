@@ -1,6 +1,6 @@
 # PianoMime Problems Log
 
-Last updated: 2026-05-18
+Last updated: 2026-06-03
 
 This document separates resolved engineering problems from caveats that remain
 important for future teammates.
@@ -71,6 +71,18 @@ important for future teammates.
    - Baseline reproduction is done.
    - The next phase is improving single-song and generalist F1, not more
      baseline cleanup.
+
+6. Two songs in the four-song single-song alignment set do not run under the
+   original residual baseline artifacts yet.
+   - Aligned set: `TwinkleTwinkleRousseau`, `Pirates_1`, `Stan_1`,
+     `Petrunko_3`.
+   - `TwinkleTwinkleRousseau`: the available fingertip demo trajectory has 150
+     frames, while the built-in MIDI task expands to 451 note steps, so
+     `DeepMimicWrapper` fails its length assertion.
+   - `Pirates_1`: notes and high-level trajectories exist, but residual-prior
+     initialization hits an infeasible IK/QP solve and triggers
+     `assert dq is not None`.
+   - See `docs/SINGLE_SONG_FOUR_BASELINE.md` for smoke-test logs.
 
 ## Do Not Forget
 

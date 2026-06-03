@@ -83,7 +83,7 @@ def shell_default(name: str, value: Any) -> str:
         value = " ".join(str(item) for item in value)
     else:
         value = str(value)
-    return f'if [[ -z "${{{name}:-}}" ]]; then export {name}={shlex.quote(value)}; fi'
+    return f'if [[ -z "${{{name}+x}}" ]]; then export {name}={shlex.quote(value)}; fi'
 
 
 def cli_args_from_mapping(values: Mapping[str, Any]) -> list[str]:

@@ -37,8 +37,10 @@ poll_seconds = 60
 skip_runtime_sync = false
 
 [single_song]
-replay_songs = ["Stan_1", "Petrunko_3", "NeverGonnaGiveYouUp_1"]
-ppo_songs = ["Petrunko_3"]
+baseline_songs = ["TwinkleTwinkleRousseau", "Pirates_1", "Stan_1", "Petrunko_3"]
+replay_songs = ["TwinkleTwinkleRousseau", "Pirates_1", "Stan_1", "Petrunko_3"]
+ppo_songs = ["TwinkleTwinkleRousseau", "Pirates_1", "Stan_1", "Petrunko_3"]
+ppo_blocked_songs = ["TwinkleTwinkleRousseau", "Pirates_1"]
 
 [single_song.replay]
 control_timestep = 0.05
@@ -90,6 +92,9 @@ ppo_batch_size = 1024
 policy_activation = "gelu"
 policy_pi_arch = [1024, 256]
 policy_vf_arch = [1024, 256]
+
+[single_song.ppo.song_overrides.TwinkleTwinkleRousseau]
+use_note_trajectory = false
 
 [multisong]
 songs = [

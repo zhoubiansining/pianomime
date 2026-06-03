@@ -27,6 +27,7 @@ CONFIG_FILE=configs/my_method.toml bash scripts/run_ppo.sh Petrunko_3
 | `[single_song]` | single-song replay 和 PPO 默认曲目列表 |
 | `[single_song.replay]` | replay baseline 的环境、视频、reward wrapper 参数 |
 | `[single_song.ppo]` | PPO residual baseline 的训练超参和网络结构 |
+| `[single_song.ppo.song_overrides.<song>]` | 单首曲目的 PPO 参数覆盖，例如 `TwinkleTwinkleRousseau` 不使用 dataset note trajectory |
 | `[multisong]` | generalist baseline 默认测试曲目 |
 | `[multisong.high_level]` | high-level diffusion evaluation 参数 |
 | `[multisong.low_level]` | low-level diffusion evaluation 参数 |

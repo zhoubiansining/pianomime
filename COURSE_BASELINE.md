@@ -69,6 +69,12 @@ Single-song replay baseline:
 | `Petrunko_3` | 0.9869 | 0.8460 | 0.8900 |
 | `NeverGonnaGiveYouUp_1` | 0.9960 | 0.9260 | 0.9514 |
 
+Downstream single-song improvements are aligned on four songs:
+`TwinkleTwinkleRousseau`, `Pirates_1`, `Stan_1`, and `Petrunko_3`. `Stan_1`
+and `Petrunko_3` have same-protocol action replay results. The first two songs
+do not run under the original residual single-song release artifacts yet; see
+`docs/SINGLE_SONG_FOUR_BASELINE.md`.
+
 Single-song PPO curve:
 
 | Song | Iterations | Env steps | Best F1 | Output |

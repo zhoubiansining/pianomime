@@ -1,6 +1,6 @@
 # PianoMime 问题记录
 
-最后更新：2026-05-18
+最后更新：2026-06-03
 
 本文档区分已经解决或缓解的问题，以及后续同学仍然需要注意的 caveats。
 
@@ -61,6 +61,12 @@
 5. 算法改进尚未开始。
    - Baseline reproduction 已完成。
    - 下一阶段是提升 single-song 和 generalist F1，而不是继续清理 baseline。
+
+6. 四首 single-song 对齐集合中有两首暂不能按原始 residual baseline 跑通。
+   - 统一集合：`TwinkleTwinkleRousseau`、`Pirates_1`、`Stan_1`、`Petrunko_3`。
+   - `TwinkleTwinkleRousseau`：现有 fingertip demo trajectory 是 150 帧，但内置 MIDI task 展开后是 451 个 note steps，`DeepMimicWrapper` 长度断言失败。
+   - `Pirates_1`：notes 和 high-level trajectories 存在，但 residual prior 初始化时 IK/QP 无解，`qp_solver.solve()` 触发 `assert dq is not None`。
+   - 详情和 smoke logs 见 `docs/SINGLE_SONG_FOUR_BASELINE_zh.md`。
 
 ## 不要忘记
 
