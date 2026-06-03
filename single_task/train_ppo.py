@@ -35,6 +35,20 @@ from stable_baselines3.common.monitor import Monitor
 import pickle
 import shutil
 
+EVAL_METRIC_FIELDS = [
+    "iteration",
+    "env_steps",
+    "precision",
+    "recall",
+    "f1",
+    "sustain_precision",
+    "sustain_recall",
+    "sustain_f1",
+    "music_lm_log_ppl",
+    "music_lm_ppl",
+]
+
+
 def activation_from_name(name: str):
     activations = {
         "relu": torch.nn.ReLU,
@@ -50,19 +64,7 @@ def activation_from_name(name: str):
 
 def write_eval_metrics_header(path: Path) -> None:
     with path.open("w", newline="") as f:
-        writer = csv.DictWriter(
-            f,
-            fieldnames=[
-                "iteration",
-                "env_steps",
-                "precision",
-                "recall",
-                "f1",
-                "sustain_precision",
-                "sustain_recall",
-                "sustain_f1",
-            ],
-        )
+        writer = csv.DictWriter(f, fieldnames=EVAL_METRIC_FIELDS)
         writer.writeheader()
 
 
@@ -76,10 +78,38 @@ def append_eval_metrics(path: Path, iteration: int, env_steps: int, metrics: dic
         "sustain_precision": metrics.get("sustain_precision"),
         "sustain_recall": metrics.get("sustain_recall"),
         "sustain_f1": metrics.get("sustain_f1"),
+        "music_lm_log_ppl": metrics.get("music_lm_log_ppl"),
+        "music_lm_ppl": metrics.get("music_lm_ppl"),
     }
     with path.open("a", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=list(row))
+        writer = csv.DictWriter(f, fieldnames=EVAL_METRIC_FIELDS)
         writer.writerow(row)
+
+
+def find_env_method(env, method_name: str):
+    stack = [env]
+    seen = set()
+    while stack:
+        current = stack.pop()
+        if current is None or id(current) in seen:
+            continue
+        seen.add(id(current))
+        method = getattr(current, method_name, None)
+        if callable(method):
+            return method
+        for attr in ("env", "_environment", "environment"):
+            stack.append(getattr(current, attr, None))
+    return None
+
+
+def get_optional_env_metrics(env, method_name: str) -> dict:
+    method = find_env_method(env, method_name)
+    if method is None:
+        return {}
+    try:
+        return method()
+    except (AttributeError, ValueError):
+        return {}
 
 
 def maybe_plot_f1_curve(metrics_path: Path, output_path: Path) -> None:
@@ -261,6 +291,7 @@ def main(args: Args) -> None:
             log_dict = prefix_dict("eval", eval_env.env.get_statistics())
             music_dict = prefix_dict("eval", eval_env.env.get_musical_metrics())
             metrics = eval_env.env.get_musical_metrics()
+            metrics.update(get_optional_env_metrics(eval_env, "get_music_lm_metrics"))
             append_eval_metrics(
                 path=metrics_path,
                 iteration=i,

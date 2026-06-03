@@ -139,3 +139,40 @@ bonus = -weight * (window_log_ppl - reference_log_ppl)
 
 Prefer setting `reference_log_ppl` from the target MIDI or a baseline rollout
 once you have measured it.
+
+## Baseline Comparison Protocol
+
+The meaningful control comparison is not "short-trained LM versus A100 LM"; it
+is a PPO A/B run with the same song, seed, PPO config, and training budget:
+
+```bash
+python scripts/run_ppo_from_config.py Petrunko_3 \
+  --run-name Petrunko_3_no_music_lm_seed42
+
+bash scripts/run_ppo_with_music_lm.sh Petrunko_3 \
+  Petrunko_3_with_music_lm_seed42
+```
+
+Both runs write `eval_metrics.csv`. The no-LM run reports note/sustain metrics.
+The Music LM run reports those same metrics plus:
+
+```text
+music_lm_log_ppl
+music_lm_ppl
+```
+
+The required success criterion is: F1 should improve or stay neutral while
+Music LM PPL decreases. A lower PPL alone is not enough if note F1 drops.
+
+Current local validation only proves that the trained checkpoint supplies a
+useful reward/evaluation signal. On `tutorial/Stan_1.mid`, the A100 checkpoint
+scores the clean MIDI much better than corrupted token streams:
+
+```text
+clean MIDI ppl: 71.29
+same tokens shuffled ppl: 1707.07
+random tokens ppl: 14165.72
+```
+
+This supports using it as an auxiliary signal, but a policy improvement claim
+still requires the PPO A/B runs above.

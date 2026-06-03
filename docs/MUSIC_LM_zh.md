@@ -180,6 +180,42 @@ bonus = -weight * (window_log_ppl - reference_log_ppl)
 目标 MIDI 的 `log_ppl` 或 baseline rollout 的 `log_ppl` 作为 reference，让 bonus
 只奖励“比参考更自然”的局部片段。
 
+## Baseline 对比口径
+
+真正有意义的控制实验不是“短训 LM vs A100 LM”，而是同一首歌、同一个 seed、
+同一套 PPO 配置和同样训练预算下的 PPO A/B：
+
+```bash
+python scripts/run_ppo_from_config.py Petrunko_3 \
+  --run-name Petrunko_3_no_music_lm_seed42
+
+bash scripts/run_ppo_with_music_lm.sh Petrunko_3 \
+  Petrunko_3_with_music_lm_seed42
+```
+
+两个 run 都会写 `eval_metrics.csv`。不加 LM 的 run 记录 note/sustain 指标；
+加 Music LM 的 run 记录相同指标，并额外记录：
+
+```text
+music_lm_log_ppl
+music_lm_ppl
+```
+
+成功标准应该是：F1 提升或至少不下降，同时 Music LM PPL 下降。只有 PPL 降低
+但 F1 下降，不能算控制效果提升。
+
+当前本地验证只能证明训练好的 checkpoint 能提供有效 reward/evaluation signal。
+在 `tutorial/Stan_1.mid` 上，A100 checkpoint 对干净 MIDI 和破坏 token stream
+的区分如下：
+
+```text
+clean MIDI ppl: 71.29
+same tokens shuffled ppl: 1707.07
+random tokens ppl: 14165.72
+```
+
+这说明它适合作为辅助信号，但“策略确实提升”的结论仍需要上面的 PPO A/B 实验。
+
 ## 推荐实验顺序
 
 1. 只训练 music LM，并在 MAESTRO validation/test 上确认 validation PPL 下降。
