@@ -62,11 +62,11 @@
    - Baseline reproduction 已完成。
    - 下一阶段是提升 single-song 和 generalist F1，而不是继续清理 baseline。
 
-6. 四首 single-song 对齐集合中有两首暂不能按原始 residual baseline 跑通。
+6. 四首 single-song 对齐集合中有两首需要额外工程修复后才能跑通。
    - 统一集合：`TwinkleTwinkleRousseau`、`Pirates_1`、`Stan_1`、`Petrunko_3`。
-   - `TwinkleTwinkleRousseau`：现有 fingertip demo trajectory 是 150 帧，但内置 MIDI task 展开后是 451 个 note steps，`DeepMimicWrapper` 长度断言失败。
-   - `Pirates_1`：notes 和 high-level trajectories 存在，但 residual prior 初始化时 IK/QP 无解，`qp_solver.solve()` 触发 `assert dq is not None`。
-   - 详情和 smoke logs 见 `docs/SINGLE_SONG_FOUR_BASELINE_zh.md`。
+   - `TwinkleTwinkleRousseau`：现有 fingertip demo trajectory 是 150 帧；已通过 per-song `control_timestep = 0.15` 和末帧 padding 对齐到 151 个 task steps。
+   - `Pirates_1`：`quadprog` 在左手 IK/QP 上数值失败；已为 QP solver 增加 `daqp/osqp/scs/ecos` fallback。
+   - 两首曲目的 residual PPO smoke test 已经跑通，正式 2000-iteration baseline 正在运行。
 
 ## 不要忘记
 

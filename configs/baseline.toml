@@ -40,7 +40,7 @@ skip_runtime_sync = false
 baseline_songs = ["TwinkleTwinkleRousseau", "Pirates_1", "Stan_1", "Petrunko_3"]
 replay_songs = ["TwinkleTwinkleRousseau", "Pirates_1", "Stan_1", "Petrunko_3"]
 ppo_songs = ["TwinkleTwinkleRousseau", "Pirates_1", "Stan_1", "Petrunko_3"]
-ppo_blocked_songs = ["TwinkleTwinkleRousseau", "Pirates_1"]
+ppo_blocked_songs = []
 
 [single_song.replay]
 control_timestep = 0.05
@@ -95,6 +95,7 @@ policy_vf_arch = [1024, 256]
 
 [single_song.ppo.song_overrides.TwinkleTwinkleRousseau]
 use_note_trajectory = false
+control_timestep = 0.15
 
 [multisong]
 songs = [

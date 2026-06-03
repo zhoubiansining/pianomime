@@ -99,10 +99,10 @@ Scheduler 默认任务集合在 `configs/baseline.toml` 中维护：
 SINGLE_REPLAY_TASKS="TwinkleTwinkleRousseau Pirates_1 Stan_1 Petrunko_3"
 MULTISONG_TASKS="Alone_1 Numb_1 NoTimeToDie_1"
 PPO_TASKS="TwinkleTwinkleRousseau Pirates_1 Stan_1 Petrunko_3"
-PPO_BLOCKED_TASKS="TwinkleTwinkleRousseau Pirates_1"
+PPO_BLOCKED_TASKS=""
 ```
 
-四首 single-song 对齐集合的当前状态见 `docs/SINGLE_SONG_FOUR_BASELINE_zh.md`。其中 `TwinkleTwinkleRousseau` 和 `Pirates_1` 缺少同口径 action replay artifacts，且 residual PPO smoke test 暂未通过；scheduler 会在 preflight 中记录 action replay 缺失项，并通过 `PPO_BLOCKED_TASKS` 跳过已知失败的 PPO 任务，不会因此中断其他任务。
+四首 single-song 对齐集合的当前状态见 `docs/SINGLE_SONG_FOUR_BASELINE_zh.md`。其中 `TwinkleTwinkleRousseau` 和 `Pirates_1` 缺少同口径 action replay artifacts，因此 action replay preflight 会记录缺失项并跳过；它们的 residual PPO smoke test 已经跑通，可以通过 PPO 训练产生 baseline curve 和 rollout。
 
 当前已经完成的 baseline 还额外包括 4 首 unseen generalist songs：
 

@@ -56,7 +56,7 @@ Single-song replay baseline：
 | `Petrunko_3` | 0.9869 | 0.8460 | 0.8900 |
 | `NeverGonnaGiveYouUp_1` | 0.9960 | 0.9260 | 0.9514 |
 
-后续 single-song 改进统一对齐到四首：`TwinkleTwinkleRousseau`、`Pirates_1`、`Stan_1`、`Petrunko_3`。其中 `Stan_1` 和 `Petrunko_3` 已有同口径 action replay 结果；`TwinkleTwinkleRousseau` 和 `Pirates_1` 在原始 release artifacts 下不能直接跑通 residual single-song baseline，具体原因见 `docs/SINGLE_SONG_FOUR_BASELINE_zh.md`。
+后续 single-song 改进统一对齐到四首：`TwinkleTwinkleRousseau`、`Pirates_1`、`Stan_1`、`Petrunko_3`。其中 `Stan_1` 和 `Petrunko_3` 已有同口径 action replay 结果；`TwinkleTwinkleRousseau` 和 `Pirates_1` 的 residual PPO smoke test 已跑通，正式 2000-iteration baseline 正在运行，详情见 `docs/SINGLE_SONG_FOUR_BASELINE_zh.md`。
 
 Single-song PPO curve：
 
@@ -84,7 +84,7 @@ Generalist diffusion checkpoint baseline：
 
 - 已有 3 首 training-set single-song 的视频和指标。
 - 已有一条 PPO F1 training curve。
-- 四首 single-song 对齐集合已写入配置；`Stan_1` PPO 曲线正在 tmux 中补跑，`TwinkleTwinkleRousseau`/`Pirates_1` 的数据或 IK 问题已记录。
+- 四首 single-song 对齐集合已写入配置；`TwinkleTwinkleRousseau`/`Pirates_1` 的数据对齐和 IK/QP 问题已修复，正式 PPO baseline 正在 tmux 中运行。
 - 已有 7 首 unseen-song generalist 的视频和指标。
 - 实验留下了日志和可复用的 CSV 文件，便于后续和改进方法对比。
 - 路径、曲目列表和核心 baseline 超参数已集中到 `configs/baseline.toml`，同学可以复制新配置来做改进实验。

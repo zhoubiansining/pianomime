@@ -64,9 +64,9 @@ Four-song alignment status:
 
 | Song | Action replay | PPO residual baseline |
 | --- | --- | --- |
-| `TwinkleTwinkleRousseau` | missing released low-level actions | smoke test fails due MIDI/demo length mismatch |
-| `Pirates_1` | missing released low-level actions | smoke test fails during IK/QP prior initialization |
-| `Stan_1` | done, F1 0.9795 | running: `Stan_1_ppo_curve_20260603_110918` |
+| `TwinkleTwinkleRousseau` | missing released low-level actions | smoke passed; full run: `TwinkleTwinkleRousseau_ppo_curve_fix2_20260603_114548` |
+| `Pirates_1` | missing released low-level actions | smoke passed; full run: `Pirates_1_ppo_curve_fix2_20260603_114548` |
+| `Stan_1` | done, F1 0.9795 | rerunnable with the same config |
 | `Petrunko_3` | done, F1 0.8900 | done, best F1 0.795686 |
 
 Raw table:

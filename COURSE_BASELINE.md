@@ -72,7 +72,8 @@ Single-song replay baseline:
 Downstream single-song improvements are aligned on four songs:
 `TwinkleTwinkleRousseau`, `Pirates_1`, `Stan_1`, and `Petrunko_3`. `Stan_1`
 and `Petrunko_3` have same-protocol action replay results. The first two songs
-do not run under the original residual single-song release artifacts yet; see
+now pass residual PPO smoke tests after demo/MIDI alignment and IK/QP fallback
+fixes; full 2000-iteration runs are in progress. See
 `docs/SINGLE_SONG_FOUR_BASELINE.md`.
 
 Single-song PPO curve:

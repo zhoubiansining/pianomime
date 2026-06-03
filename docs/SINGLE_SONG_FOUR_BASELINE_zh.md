@@ -11,18 +11,16 @@ Stan_1
 Petrunko_3
 ```
 
-这四首已经写入 `configs/baseline.toml` 的 `single_song.baseline_songs` 和 `single_song.ppo_songs`。需要注意的是，原始 PianoMime release 中的 single-song action replay artifacts 并不覆盖这四首的全部曲目，因此当前 baseline 状态分成两类。
+这四首已经写入 `configs/baseline.toml` 的 `single_song.baseline_songs` 和 `single_song.ppo_songs`。
 
-为了避免默认 scheduler 反复启动已知失败任务，`TwinkleTwinkleRousseau` 和 `Pirates_1` 暂时也写入了 `single_song.ppo_blocked_songs`。如果后续拿到匹配 artifacts 或修复 IK/QP，可以先清空环境变量 `PPO_BLOCKED_TASKS=""` 或修改配置再重跑。
+## 当前状态
 
-## 当前可用结果
-
-| Song | Action replay video | Action replay F1 | PPO residual curve |
-| --- | --- | ---: | --- |
-| `Stan_1` | 已有 | 0.9795 | 正在补跑：`Stan_1_ppo_curve_20260603_110918` |
-| `Petrunko_3` | 已有 | 0.8900 | 已有：best F1 0.795686 |
-| `TwinkleTwinkleRousseau` | 暂无 released low-level actions | 暂无 | smoke test 未通过，见下文 |
-| `Pirates_1` | 暂无 released low-level actions | 暂无 | smoke test 未通过，见下文 |
+| Song | Action replay baseline | PPO residual baseline |
+| --- | --- | --- |
+| `TwinkleTwinkleRousseau` | 原始 release 缺少 low-level actions，不能 replay | smoke 已跑通；正式 run: `TwinkleTwinkleRousseau_ppo_curve_fix2_20260603_114548` |
+| `Pirates_1` | 原始 release 缺少 low-level actions，不能 replay | smoke 已跑通；正式 run: `Pirates_1_ppo_curve_fix2_20260603_114548` |
+| `Stan_1` | 已有，F1 0.9795 | 旧 run 中断；可按同一配置重跑 |
+| `Petrunko_3` | 已有，F1 0.8900 | 已有，best F1 0.795686 |
 
 已有 action replay 视频：
 
@@ -37,35 +35,32 @@ Petrunko_3
 /home/gaoj/share4/_piano/baseline_results/single_song/training_runs/Petrunko_3_ppo_curve_20260513_135059/eval_f1_curve.png
 ```
 
-`Stan_1` PPO 已经在 tmux 中启动：
+正式运行中的两条新曲目：
 
 ```bash
-tmux attach -t pianomime_single_song_four
-tail -f /home/gaoj/piano_scratch/baseline_results/single_song/training_runs/Stan_1_ppo_curve_20260603_110918.log
+tmux attach -t pianomime_twinkle_pirates_fix
+tail -f /home/gaoj/piano_scratch/baseline_results/single_song/training_runs/TwinkleTwinkleRousseau_ppo_curve_fix2_20260603_114548.log
+tail -f /home/gaoj/piano_scratch/baseline_results/single_song/training_runs/Pirates_1_ppo_curve_fix2_20260603_114548.log
 ```
 
-该任务结束后会自动把 `/home/gaoj/piano_scratch/baseline_results/` 同步回 `/home/gaoj/share4/_piano/baseline_results/`。
+## Smoke Test 结果
 
-## 未完成项及原因
+这两个 smoke test 使用 `total_iters = 1`，只用于验证 pipeline 修复是否有效，不作为最终 baseline 数字。
 
-`TwinkleTwinkleRousseau` 和 `Pirates_1` 目前不能直接按原始 residual single-song baseline 跑出同口径 PPO 曲线。
+| Song | Env steps | Precision | Recall | F1 | Video |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `TwinkleTwinkleRousseau` | 512 | 0.1876 | 0.6959 | 0.4196 | `/home/gaoj/piano_scratch/baseline_results/single_song/smoke_runs/TwinkleTwinkleRousseau_smoke_fix_20260603/eval/00002.mp4` |
+| `Pirates_1` | 512 | 0.8697 | 0.8036 | 0.8304 | `/home/gaoj/piano_scratch/baseline_results/single_song/smoke_runs/Pirates_1_smoke_fix_20260603/eval/00002.mp4` |
 
-| Song | Smoke test log | 失败原因 |
-| --- | --- | --- |
-| `TwinkleTwinkleRousseau` | `/home/gaoj/piano_scratch/baseline_results/single_song/smoke_runs/TwinkleTwinkleRousseau_smoke_20260603.log` | 内置 MIDI 展开后 task note steps 为 451，但现有 fingertip demo trajectory 只有 150 帧，`DeepMimicWrapper` 要求二者长度一致，因此触发 assertion。 |
-| `Pirates_1` | `/home/gaoj/piano_scratch/baseline_results/single_song/smoke_runs/Pirates_1_smoke_20260603.log` | 有 notes 和 high-level trajectory，但 residual prior 的 IK/QP 初始化时 `qp_solver.solve()` 返回空解，触发 `assert dq is not None`。 |
+## 修复内容
 
-这些失败不是 GPU 或环境安装问题，而是曲目数据与原始 residual prior/action-replay pipeline 的匹配问题。后续如果同学已经有这两首的 processed single-song artifacts 或修复后的 IK 设置，应把对应的 notes、fingertip trajectories、trained actions/checkpoints 放入结果目录，再重新补跑。
+- `TwinkleTwinkleRousseau`
+  - 原因：原始 default `control_timestep = 0.05` 时，内置 MIDI task 展开为 451 steps，而现有 fingertip demo trajectory 是 150 帧。
+  - 修复：为该曲目设置 `control_timestep = 0.15`，使 task 长度变为 151 steps，并将 demo 末帧 padding 一帧。
+- `Pirates_1`
+  - 原因：左手 residual prior 初始化时，`quadprog` 对该 IK/QP 返回空解，但同一问题可由 `daqp/osqp/scs` 求解。
+  - 修复：`single_task/controller/qp_solver.py` 中增加 solver fallback，不再把 `quadprog` 的数值失败误判为轨迹不可行。
+- `single_task/utils.py`
+  - 增加 demonstration 与 task 长度对齐逻辑。
+  - 将 `demo_ctrl_timestep` 显式设为当前 `control_timestep`，避免 per-song timestep 改动后 demo index 跳帧。
 
-## 代码配置变化
-
-- `configs/baseline.toml`
-  - 新增 `single_song.baseline_songs`，固定四首 single-song 对齐集合。
-  - `single_song.ppo_songs` 更新为四首。
-  - 为 `TwinkleTwinkleRousseau` 加了 per-song override：`use_note_trajectory = false`，因为数据包里没有 `dataset/notes/TwinkleTwinkleRousseau.pkl`。
-- `scripts/run_ppo_from_config.py`
-  - 支持 `[single_song.ppo.song_overrides.<song>]`，避免为了某一首歌修改全局 PPO 超参。
-- `scripts/baseline_scheduler.sh`
-  - single-song action replay 增加 artifacts preflight；缺少 replay actions 时记录原因并跳过，不会让整个 scheduler 崩掉。
-- `pianomime_config.py`
-  - `shell_default` 改为只在环境变量未设置时填默认值；现在可以用 `MULTISONG_TASKS=''` 这样的空字符串显式禁用某类任务。

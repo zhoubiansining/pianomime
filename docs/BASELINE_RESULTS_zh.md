@@ -54,9 +54,9 @@ PDF 原始要求是从 training dataset 选 3 首并产出 final performance vid
 
 | Song | Action replay | PPO residual baseline |
 | --- | --- | --- |
-| `TwinkleTwinkleRousseau` | 原始 release 缺少 low-level actions，不能 replay | smoke test 因 MIDI/demo 长度不一致失败 |
-| `Pirates_1` | 原始 release 缺少 low-level actions，不能 replay | smoke test 因 IK/QP prior 初始化失败 |
-| `Stan_1` | 已完成，F1 0.9795 | 正在补跑：`Stan_1_ppo_curve_20260603_110918` |
+| `TwinkleTwinkleRousseau` | 原始 release 缺少 low-level actions，不能 replay | smoke 已跑通，正式 run: `TwinkleTwinkleRousseau_ppo_curve_fix2_20260603_114548` |
+| `Pirates_1` | 原始 release 缺少 low-level actions，不能 replay | smoke 已跑通，正式 run: `Pirates_1_ppo_curve_fix2_20260603_114548` |
+| `Stan_1` | 已完成，F1 0.9795 | 可按同一配置重跑 |
 | `Petrunko_3` | 已完成，F1 0.8900 | 已完成，best F1 0.795686 |
 
 原始表格：

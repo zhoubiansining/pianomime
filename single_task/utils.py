@@ -33,6 +33,27 @@ def _load_note_trajectory(task_name):
     with (PROJECT_ROOT / "dataset" / "notes" / f"{task_name}.pkl").open("rb") as f:
         return pickle.load(f)
 
+
+def _align_demonstrations_to_task(demonstrations_lh, demonstrations_rh, task, task_name):
+    target_len = len(task._notes)
+    current_len = demonstrations_lh.shape[0]
+    if current_len == target_len:
+        return demonstrations_lh, demonstrations_rh
+    if current_len > target_len:
+        print(f"Truncating {task_name} demonstrations from {current_len} to {target_len} frames.")
+        return demonstrations_lh[:target_len], demonstrations_rh[:target_len]
+    pad = target_len - current_len
+    print(f"Padding {task_name} demonstrations from {current_len} to {target_len} frames.")
+    demonstrations_lh = np.concatenate(
+        [demonstrations_lh, np.repeat(demonstrations_lh[-1:], pad, axis=0)],
+        axis=0,
+    )
+    demonstrations_rh = np.concatenate(
+        [demonstrations_rh, np.repeat(demonstrations_rh[-1:], pad, axis=0)],
+        axis=0,
+    )
+    return demonstrations_lh, demonstrations_rh
+
 def get_env_no_residual(args, record_dir: Optional[Path] = None):
     left_hand_action_list = np.load(
         PROJECT_ROOT / "dataset" / "high_level_trajectories" / f"{args.mimic_task}_left_hand_action_list.npy"
@@ -69,6 +90,9 @@ def get_env_no_residual(args, record_dir: Optional[Path] = None):
                 gravity_compensation=args.gravity_compensation,
                 reduced_action_space=args.reduced_action_space,
             )
+    left_hand_action_list, right_hand_action_list = _align_demonstrations_to_task(
+        left_hand_action_list, right_hand_action_list, task, args.mimic_task
+    )
     env = composer_utils.Environment(
         recompile_physics=False, task=task, strip_singleton_obs_buffer_dim=True
     )
@@ -78,6 +102,7 @@ def get_env_no_residual(args, record_dir: Optional[Path] = None):
             environment=env,
             demonstrations_lh=left_hand_action_list,
             demonstrations_rh=right_hand_action_list,
+            demo_ctrl_timestep=args.control_timestep,
             remove_goal_observation=False,
             mimic_z_axis=args.mimic_z_axis,
             n_steps_lookahead=args.n_steps_lookahead,
@@ -157,6 +182,9 @@ def get_env(args, record_dir: Optional[Path] = None):
             reduced_action_space=args.reduced_action_space,
             residual_factor=args.residual_factor,
         )
+    left_hand_action_list, right_hand_action_list = _align_demonstrations_to_task(
+        left_hand_action_list, right_hand_action_list, task, args.mimic_task
+    )
 
     env = composer_utils.Environment(
         recompile_physics=False, task=task, strip_singleton_obs_buffer_dim=True
@@ -168,6 +196,7 @@ def get_env(args, record_dir: Optional[Path] = None):
             environment=env,
             demonstrations_lh=left_hand_action_list,
             demonstrations_rh=right_hand_action_list,
+            demo_ctrl_timestep=args.control_timestep,
             remove_goal_observation=False,
             mimic_z_axis=args.mimic_z_axis,
             n_steps_lookahead=args.n_steps_lookahead,

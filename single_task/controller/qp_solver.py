@@ -156,11 +156,23 @@ class IK_qpsolver:
     def solve(self):
         H, c = self.build_objective()
         G, h = self.build_inequalities()
-        # Solve the QP.
         problem = qpsolvers.Problem(H, c, G, h)
-        result = qpsolvers.solve_problem(problem, solver='quadprog')
-        dq = result.x
-        assert dq is not None
+        dq = None
+        errors = []
+        for solver in ("quadprog", "daqp", "osqp", "scs", "ecos"):
+            if solver not in qpsolvers.available_solvers:
+                continue
+            try:
+                result = qpsolvers.solve_problem(problem, solver=solver)
+                dq = None if result is None else result.x
+            except Exception as exc:
+                errors.append(f"{solver}: {type(exc).__name__}: {exc}")
+                dq = None
+            if dq is not None:
+                break
+            errors.append(f"{solver}: no solution")
+        if dq is None:
+            raise RuntimeError("IK QP failed with all available solvers: " + "; ".join(errors))
         v = dq / self.dt
         return v
 

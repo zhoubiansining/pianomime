@@ -22,9 +22,9 @@ The reproduced baseline currently includes training-set single-song replay
 videos, one `Petrunko_3` PPO F1 training curve, and seven unseen-song
 generalist evaluation videos. Downstream single-song work is aligned on
 `TwinkleTwinkleRousseau`, `Pirates_1`, `Stan_1`, and `Petrunko_3`; the first
-two songs expose artifact/IK mismatches under the original release artifacts,
-as documented in `docs/SINGLE_SONG_FOUR_BASELINE.md`. Exact metrics and output
-paths are indexed in:
+two songs require demo/MIDI alignment and IK/QP numerical fallback fixes, both
+of which now pass smoke tests. Full 2000-iteration PPO baselines for those two
+songs are running. Exact metrics and output paths are indexed in:
 
 - `docs/BASELINE_RESULTS.md`
 - `docs/BASELINE_RESULTS_zh.md`
