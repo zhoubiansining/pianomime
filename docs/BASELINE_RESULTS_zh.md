@@ -1,6 +1,6 @@
 # PianoMime Baseline 结果
 
-最后更新：2026-06-03
+最后更新：2026-06-04
 
 本文档是 Dexterous Piano Track baseline 复现结果的主要索引。后续同学开始做改进之前，建议先读这里，确认 baseline 数字、视频、日志和训练曲线分别在哪里。
 
@@ -19,7 +19,8 @@ baseline_results/
   single_song/metrics.csv
   single_song/videos/
   single_song/training_runs/Petrunko_3_ppo_curve_20260513_135059/
-  single_song/training_runs/Stan_1_ppo_curve_20260603_110918/  # running
+  single_song/training_runs/TwinkleTwinkleRousseau_ppo_curve_fix2_20260603_114548/
+  single_song/training_runs/Pirates_1_ppo_curve_fix2_20260603_114548/
   multisong/metrics.csv
   multisong/videos/
   multisong/logs/
@@ -54,8 +55,8 @@ PDF 原始要求是从 training dataset 选 3 首并产出 final performance vid
 
 | Song | Action replay | PPO residual baseline |
 | --- | --- | --- |
-| `TwinkleTwinkleRousseau` | 原始 release 缺少 low-level actions，不能 replay | smoke 已跑通，正式 run: `TwinkleTwinkleRousseau_ppo_curve_fix2_20260603_114548` |
-| `Pirates_1` | 原始 release 缺少 low-level actions，不能 replay | smoke 已跑通，正式 run: `Pirates_1_ppo_curve_fix2_20260603_114548` |
+| `TwinkleTwinkleRousseau` | 原始 release 缺少 low-level actions，不能 replay | 已完成，best-checkpoint rollout F1 0.7912 |
+| `Pirates_1` | 原始 release 缺少 low-level actions，不能 replay | 已完成，best-checkpoint rollout F1 0.8718 |
 | `Stan_1` | 已完成，F1 0.9795 | 可按同一配置重跑 |
 | `Petrunko_3` | 已完成，F1 0.8900 | 已完成，best F1 0.795686 |
 
@@ -101,6 +102,13 @@ PDF 要求提供 F1 training curve。Released checkpoints 不包含 training log
 | Training log | `/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/Petrunko_3_ppo_curve_20260513_135059.log` |
 
 注意：这条 PPO run 属于 residual single-song 路径。它的 prior action 来自 stored song demonstration trajectory 经过 IK/QP 的结果，不来自 generalist diffusion checkpoint。`02001.mp4` 是 best checkpoint rollout，因此对应 best recorded F1。
+
+四首对齐集合中额外补跑的 PPO baseline：
+
+| Song | Iterations | Env steps | Best-checkpoint rollout P/R/F1 | Last evaluation P/R/F1 | Run directory |
+| --- | ---: | ---: | --- | --- | --- |
+| `TwinkleTwinkleRousseau` | 2000 | 1,024,000 | 0.7693 / 0.7025 / 0.7912 | 0.9338 / 0.6639 / 0.6406 | `/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/TwinkleTwinkleRousseau_ppo_curve_fix2_20260603_114548` |
+| `Pirates_1` | 2000 | 1,024,000 | 0.9064 / 0.8722 / 0.8718 | 0.8369 / 0.7950 / 0.8177 | `/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/Pirates_1_ppo_curve_fix2_20260603_114548` |
 
 ## Generalist Diffusion Baseline
 

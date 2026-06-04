@@ -1,6 +1,6 @@
 # PianoMime Baseline Results
 
-Last updated: 2026-06-03
+Last updated: 2026-06-04
 
 This document is the main index for the reproduced Dexterous Piano Track
 baseline. It records the exact result files that classmates should inspect
@@ -21,7 +21,8 @@ baseline_results/
   single_song/metrics.csv
   single_song/videos/
   single_song/training_runs/Petrunko_3_ppo_curve_20260513_135059/
-  single_song/training_runs/Stan_1_ppo_curve_20260603_110918/  # running
+  single_song/training_runs/TwinkleTwinkleRousseau_ppo_curve_fix2_20260603_114548/
+  single_song/training_runs/Pirates_1_ppo_curve_fix2_20260603_114548/
   multisong/metrics.csv
   multisong/videos/
   multisong/logs/
@@ -64,8 +65,8 @@ Four-song alignment status:
 
 | Song | Action replay | PPO residual baseline |
 | --- | --- | --- |
-| `TwinkleTwinkleRousseau` | missing released low-level actions | smoke passed; full run: `TwinkleTwinkleRousseau_ppo_curve_fix2_20260603_114548` |
-| `Pirates_1` | missing released low-level actions | smoke passed; full run: `Pirates_1_ppo_curve_fix2_20260603_114548` |
+| `TwinkleTwinkleRousseau` | missing released low-level actions | complete, best-checkpoint rollout F1 0.7912 |
+| `Pirates_1` | missing released low-level actions | complete, best-checkpoint rollout F1 0.8718 |
 | `Stan_1` | done, F1 0.9795 | rerunnable with the same config |
 | `Petrunko_3` | done, F1 0.8900 | done, best F1 0.795686 |
 
@@ -117,6 +118,13 @@ Interpretation note: this PPO run is the residual single-song path. Its prior
 action comes from the stored song demonstration trajectory through IK/QP, not
 from the generalist diffusion checkpoint. `02001.mp4` is generated from the
 best checkpoint and therefore corresponds to the best recorded F1.
+
+Additional four-song-alignment PPO baselines:
+
+| Song | Iterations | Env steps | Best-checkpoint rollout P/R/F1 | Last evaluation P/R/F1 | Run directory |
+| --- | ---: | ---: | --- | --- | --- |
+| `TwinkleTwinkleRousseau` | 2000 | 1,024,000 | 0.7693 / 0.7025 / 0.7912 | 0.9338 / 0.6639 / 0.6406 | `/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/TwinkleTwinkleRousseau_ppo_curve_fix2_20260603_114548` |
+| `Pirates_1` | 2000 | 1,024,000 | 0.9064 / 0.8722 / 0.8718 | 0.8369 / 0.7950 / 0.8177 | `/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/Pirates_1_ppo_curve_fix2_20260603_114548` |
 
 ## Generalist Diffusion Baseline
 

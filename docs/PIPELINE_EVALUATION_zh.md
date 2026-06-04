@@ -129,13 +129,15 @@ Single-song replay：
 | `Petrunko_3` | 0.9869 | 0.8460 | 0.8900 |
 | `NeverGonnaGiveYouUp_1` | 0.9960 | 0.9260 | 0.9514 |
 
-后续 single-song 改进的统一集合为 `TwinkleTwinkleRousseau`、`Pirates_1`、`Stan_1`、`Petrunko_3`。当前 pipeline 已经能把四首写入配置并做 artifacts preflight；`Stan_1` PPO 曲线正在补跑，`TwinkleTwinkleRousseau`/`Pirates_1` 的原始 residual baseline smoke test 失败原因见 `docs/SINGLE_SONG_FOUR_BASELINE_zh.md`。
+后续 single-song 改进的统一集合为 `TwinkleTwinkleRousseau`、`Pirates_1`、`Stan_1`、`Petrunko_3`。当前 pipeline 已经能把四首写入配置并做 artifacts preflight；`TwinkleTwinkleRousseau`/`Pirates_1` 的 demo/MIDI 对齐和 IK/QP 数值问题已修复，完整 2000-iteration PPO baseline 已经跑完，指标和文件路径见 `docs/SINGLE_SONG_FOUR_BASELINE_zh.md`。
 
 Single-song PPO residual：
 
 | Song | Iterations | Best-checkpoint rollout F1 |
 | --- | ---: | ---: |
 | `Petrunko_3` | 2000 | 0.795686 |
+| `TwinkleTwinkleRousseau` | 2000 | 0.7912 |
+| `Pirates_1` | 2000 | 0.8718 |
 
 Generalist diffusion：
 

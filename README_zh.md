@@ -16,7 +16,7 @@
 - 多任务自动调度入口：`scripts/start_tmux_baseline.sh`
 - 路径、曲目和超参数的集中配置：`configs/baseline.toml`
 
-当前已经复现出的 baseline 结果包括 training-set 单曲 replay 视频、`Petrunko_3` 的 PPO F1 训练曲线，以及 7 个未见曲目的 generalist evaluation 视频。后续 single-song 改进统一对齐到 `TwinkleTwinkleRousseau`、`Pirates_1`、`Stan_1`、`Petrunko_3` 四首；前两首所需的 demo/MIDI 对齐和 IK/QP 数值问题已经修复，正式 2000-iteration PPO baseline 正在运行中。具体指标和输出路径整理在：
+当前已经复现出的 baseline 结果包括 training-set 单曲 replay 视频、对齐 single-song 集合的 PPO F1 训练曲线，以及 7 个未见曲目的 generalist evaluation 视频。后续 single-song 改进统一对齐到 `TwinkleTwinkleRousseau`、`Pirates_1`、`Stan_1`、`Petrunko_3` 四首；前两首所需的 demo/MIDI 对齐和 IK/QP 数值问题已经修复，完整 2000-iteration PPO baseline 已经跑完。具体指标和输出路径整理在：
 
 - `docs/BASELINE_RESULTS.md`
 - `docs/BASELINE_RESULTS_zh.md`

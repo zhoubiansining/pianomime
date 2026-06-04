@@ -1,6 +1,6 @@
 # Course Baseline Notes
 
-Last updated: 2026-05-19
+Last updated: 2026-06-04
 
 This fork is the course working copy for the Dexterous Piano Track. It keeps
 the original PianoMime baseline logic intact, while adding reproducibility
@@ -72,8 +72,8 @@ Single-song replay baseline:
 Downstream single-song improvements are aligned on four songs:
 `TwinkleTwinkleRousseau`, `Pirates_1`, `Stan_1`, and `Petrunko_3`. `Stan_1`
 and `Petrunko_3` have same-protocol action replay results. The first two songs
-now pass residual PPO smoke tests after demo/MIDI alignment and IK/QP fallback
-fixes; full 2000-iteration runs are in progress. See
+now have complete 2000-iteration residual PPO baselines after demo/MIDI
+alignment and IK/QP fallback fixes. See
 `docs/SINGLE_SONG_FOUR_BASELINE.md`.
 
 Single-song PPO curve:
@@ -81,6 +81,8 @@ Single-song PPO curve:
 | Song | Iterations | Env steps | Best F1 | Output |
 | --- | ---: | ---: | ---: | --- |
 | `Petrunko_3` | 2000 | 1,024,000 | 0.795686 | `eval_metrics.csv`, `eval_f1_curve.png`, final rollout video |
+| `TwinkleTwinkleRousseau` | 2000 | 1,024,000 | 0.7912 | `eval_metrics.csv`, `eval_f1_curve.png`, final rollout video |
+| `Pirates_1` | 2000 | 1,024,000 | 0.8718 | `eval_metrics.csv`, `eval_f1_curve.png`, final rollout video |
 
 Generalist diffusion checkpoint baseline:
 

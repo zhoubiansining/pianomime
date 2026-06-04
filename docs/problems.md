@@ -72,8 +72,8 @@ important for future teammates.
    - The next phase is improving single-song and generalist F1, not more
      baseline cleanup.
 
-6. Two songs in the four-song single-song alignment set require extra
-   engineering fixes before running.
+6. Two songs in the four-song single-song alignment set required extra
+   engineering fixes before they could run.
    - Aligned set: `TwinkleTwinkleRousseau`, `Pirates_1`, `Stan_1`,
      `Petrunko_3`.
    - `TwinkleTwinkleRousseau`: the available fingertip demo trajectory has 150
@@ -81,8 +81,10 @@ important for future teammates.
      one-frame terminal padding.
    - `Pirates_1`: `quadprog` fails numerically on the left-hand IK/QP; the QP
      solver now falls back to `daqp`, `osqp`, `scs`, and `ecos`.
-   - Both residual PPO smoke tests now pass, and full 2000-iteration baselines
-     are running.
+   - Both fixes are in the repository, and the full 2000-iteration baselines
+     have completed.
+   - Final PPO best-checkpoint rollout F1 values are 0.7912 for
+     `TwinkleTwinkleRousseau` and 0.8718 for `Pirates_1`.
 
 ## Do Not Forget
 

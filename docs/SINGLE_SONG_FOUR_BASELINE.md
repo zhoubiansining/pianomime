@@ -1,6 +1,6 @@
 # Four-Song Single-Song Baseline Alignment
 
-Last updated: 2026-06-03
+Last updated: 2026-06-04
 
 Downstream single-song improvement experiments are aligned on:
 
@@ -16,25 +16,28 @@ These songs are recorded in `configs/baseline.toml` under
 
 | Song | Action replay baseline | PPO residual baseline |
 | --- | --- | --- |
-| `TwinkleTwinkleRousseau` | no released low-level actions | smoke passed; full run: `TwinkleTwinkleRousseau_ppo_curve_fix2_20260603_114548` |
-| `Pirates_1` | no released low-level actions | smoke passed; full run: `Pirates_1_ppo_curve_fix2_20260603_114548` |
+| `TwinkleTwinkleRousseau` | no released low-level actions | complete, best-checkpoint rollout F1 0.7912 |
+| `Pirates_1` | no released low-level actions | complete, best-checkpoint rollout F1 0.8718 |
 | `Stan_1` | available, F1 0.9795 | interrupted old run; rerunnable with the same config |
 | `Petrunko_3` | available, F1 0.8900 | available, best F1 0.795686 |
 
-Smoke-test metrics:
+Full 2000-iteration PPO metrics:
 
-| Song | Env steps | Precision | Recall | F1 |
-| --- | ---: | ---: | ---: | ---: |
-| `TwinkleTwinkleRousseau` | 512 | 0.1876 | 0.6959 | 0.4196 |
-| `Pirates_1` | 512 | 0.8697 | 0.8036 | 0.8304 |
+| Song | Iterations | Env steps | Best-checkpoint rollout P/R/F1 | Last evaluation P/R/F1 | Curve / video |
+| --- | ---: | ---: | --- | --- | --- |
+| `TwinkleTwinkleRousseau` | 2000 | 1,024,000 | 0.7693 / 0.7025 / 0.7912 | 0.9338 / 0.6639 / 0.6406 | `TwinkleTwinkleRousseau_ppo_curve_fix2_20260603_114548` |
+| `Pirates_1` | 2000 | 1,024,000 | 0.9064 / 0.8722 / 0.8718 | 0.8369 / 0.7950 / 0.8177 | `Pirates_1_ppo_curve_fix2_20260603_114548` |
 
-The smoke runs only validate the pipeline fixes. Full 2000-iteration PPO
-baselines are running in:
+Result files:
 
-```bash
-tmux attach -t pianomime_twinkle_pirates_fix
-tail -f /home/gaoj/piano_scratch/baseline_results/single_song/training_runs/TwinkleTwinkleRousseau_ppo_curve_fix2_20260603_114548.log
-tail -f /home/gaoj/piano_scratch/baseline_results/single_song/training_runs/Pirates_1_ppo_curve_fix2_20260603_114548.log
+```text
+/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/TwinkleTwinkleRousseau_ppo_curve_fix2_20260603_114548/eval_metrics.csv
+/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/TwinkleTwinkleRousseau_ppo_curve_fix2_20260603_114548/eval_f1_curve.png
+/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/TwinkleTwinkleRousseau_ppo_curve_fix2_20260603_114548/eval/02001.mp4
+
+/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/Pirates_1_ppo_curve_fix2_20260603_114548/eval_metrics.csv
+/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/Pirates_1_ppo_curve_fix2_20260603_114548/eval_f1_curve.png
+/home/gaoj/share4/_piano/baseline_results/single_song/training_runs/Pirates_1_ppo_curve_fix2_20260603_114548/eval/02001.mp4
 ```
 
 Fix summary:
@@ -44,4 +47,3 @@ Fix summary:
 - `Pirates_1`: add IK/QP solver fallback after `quadprog` numerical failure.
 - `single_task/utils.py`: align demonstration length to task length and pass the
   current `control_timestep` as `demo_ctrl_timestep`.
-
