@@ -1,0 +1,127 @@
+{
+  "rows": [
+    {
+      "variant": "baseline",
+      "song": "TwinkleTwinkleRousseau",
+      "seed": 42,
+      "status": "ok",
+      "f1": 0.6903178122690318,
+      "precision": 0.950110864745011,
+      "recall": 0.7143385070214339,
+      "sustain_f1": 1.0,
+      "total_reward": 899.951633810997,
+      "episode_length": null,
+      "best_video": "/workspace/code/sining/HW/DRL/Project/pianomime/results/reward_sensitivity/baseline__TwinkleTwinkleRousseau/eval_best.mp4",
+      "final_video": "/workspace/code/sining/HW/DRL/Project/pianomime/results/reward_sensitivity/baseline__TwinkleTwinkleRousseau/eval_final.mp4",
+      "eval_history": "/workspace/code/sining/HW/DRL/Project/pianomime/results/reward_sensitivity/baseline__TwinkleTwinkleRousseau/eval_history.jsonl",
+      "run_dir": "/workspace/code/sining/HW/DRL/Project/pianomime/results/reward_sensitivity/baseline__TwinkleTwinkleRousseau"
+    },
+    {
+      "variant": "fdist_0.1",
+      "song": "TwinkleTwinkleRousseau",
+      "seed": 42,
+      "status": "ok",
+      "f1": 0.6570583887657058,
+      "precision": 0.9689578713968958,
+      "recall": 0.6862527716186253,
+      "sustain_f1": 1.0,
+      "total_reward": 902.6414473056793,
+      "episode_length": null,
+      "best_video": "/workspace/code/sining/HW/DRL/Project/pianomime/results/reward_sensitivity/fdist_0.1__TwinkleTwinkleRousseau/eval_best.mp4",
+      "final_video": "/workspace/code/sining/HW/DRL/Project/pianomime/results/reward_sensitivity/fdist_0.1__TwinkleTwinkleRousseau/eval_final.mp4",
+      "eval_history": "/workspace/code/sining/HW/DRL/Project/pianomime/results/reward_sensitivity/fdist_0.1__TwinkleTwinkleRousseau/eval_history.jsonl",
+      "run_dir": "/workspace/code/sining/HW/DRL/Project/pianomime/results/reward_sensitivity/fdist_0.1__TwinkleTwinkleRousseau"
+    },
+    {
+      "variant": "fdist_0.5",
+      "song": "TwinkleTwinkleRousseau",
+      "seed": 42,
+      "status": "ok",
+      "f1": 0.6936437546193643,
+      "precision": 0.8802660753880266,
+      "recall": 0.7095343680709535,
+      "sustain_f1": 1.0,
+      "total_reward": 912.5535156726837,
+      "episode_length": null,
+      "best_video": "/workspace/code/sining/HW/DRL/Project/pianomime/results/reward_sensitivity/fdist_0.5__TwinkleTwinkleRousseau/eval_best.mp4",
+      "final_video": "/workspace/code/sining/HW/DRL/Project/pianomime/results/reward_sensitivity/fdist_0.5__TwinkleTwinkleRousseau/eval_final.mp4",
+      "eval_history": "/workspace/code/sining/HW/DRL/Project/pianomime/results/reward_sensitivity/fdist_0.5__TwinkleTwinkleRousseau/eval_history.jsonl",
+      "run_dir": "/workspace/code/sining/HW/DRL/Project/pianomime/results/reward_sensitivity/fdist_0.5__TwinkleTwinkleRousseau"
+    },
+    {
+      "variant": "fdist_1.0",
+      "song": "TwinkleTwinkleRousseau",
+      "seed": 42,
+      "status": "ok",
+      "f1": 0.7036215816703622,
+      "precision": 0.7804878048780488,
+      "recall": 0.7265336289726534,
+      "sustain_f1": 1.0,
+      "total_reward": 918.7870314121246,
+      "episode_length": null,
+      "best_video": "/workspace/code/sining/HW/DRL/Project/pianomime/results/reward_sensitivity/fdist_1.0__TwinkleTwinkleRousseau/eval_best.mp4",
+      "final_video": "/workspace/code/sining/HW/DRL/Project/pianomime/results/reward_sensitivity/fdist_1.0__TwinkleTwinkleRousseau/eval_final.mp4",
+      "eval_history": "/workspace/code/sining/HW/DRL/Project/pianomime/results/reward_sensitivity/fdist_1.0__TwinkleTwinkleRousseau/eval_history.jsonl",
+      "run_dir": "/workspace/code/sining/HW/DRL/Project/pianomime/results/reward_sensitivity/fdist_1.0__TwinkleTwinkleRousseau"
+    }
+  ],
+  "summary": [
+    {
+      "variant": "fdist_1.0",
+      "num_runs": 1,
+      "avg_f1": 0.7036215816703622,
+      "avg_precision": 0.7804878048780488,
+      "avg_recall": 0.7265336289726534,
+      "avg_sustain_f1": 1.0,
+      "avg_total_reward": 918.7870314121246,
+      "avg_episode_length": null
+    },
+    {
+      "variant": "fdist_0.5",
+      "num_runs": 1,
+      "avg_f1": 0.6936437546193643,
+      "avg_precision": 0.8802660753880266,
+      "avg_recall": 0.7095343680709535,
+      "avg_sustain_f1": 1.0,
+      "avg_total_reward": 912.5535156726837,
+      "avg_episode_length": null
+    },
+    {
+      "variant": "baseline",
+      "num_runs": 1,
+      "avg_f1": 0.6903178122690318,
+      "avg_precision": 0.950110864745011,
+      "avg_recall": 0.7143385070214339,
+      "avg_sustain_f1": 1.0,
+      "avg_total_reward": 899.951633810997,
+      "avg_episode_length": null
+    },
+    {
+      "variant": "fdist_0.1",
+      "num_runs": 1,
+      "avg_f1": 0.6570583887657058,
+      "avg_precision": 0.9689578713968958,
+      "avg_recall": 0.6862527716186253,
+      "avg_sustain_f1": 1.0,
+      "avg_total_reward": 902.6414473056793,
+      "avg_episode_length": null
+    }
+  ],
+  "config": {
+    "songs": [
+      "TwinkleTwinkleRousseau"
+    ],
+    "variants": [
+      "baseline",
+      "fdist_0.1",
+      "fdist_0.5",
+      "fdist_1.0"
+    ],
+    "seeds": [
+      42
+    ],
+    "total_iters": 2000,
+    "num_envs": 8,
+    "residual_factor": 0.03
+  }
+}
