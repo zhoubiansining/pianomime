@@ -1,0 +1,46 @@
+{
+  "_comment": "Best coefficients from sensitivity analysis (TwinkleTwinkleRousseau, 2000 iters, seed=42). act_smooth was excluded (all coefficients hurt).",
+
+  "best_timing": {
+    "reward_timing": true,
+    "reward_timing_coef": 1.0
+  },
+
+  "best_preposition": {
+    "reward_prepositioning": true,
+    "reward_prepositioning_coef": 1.0,
+    "reward_prepositioning_lookahead": 5
+  },
+
+  "best_vel_smooth": {
+    "reward_velocity_smoothness": true,
+    "reward_velocity_smoothness_coef": 0.001
+  },
+
+  "best_finger_dist": {
+    "reward_finger_key_distance": true,
+    "reward_finger_key_distance_coef": 1.0
+  },
+
+  "best_full_combo": {
+    "reward_timing": true,
+    "reward_timing_coef": 1.0,
+    "reward_prepositioning": true,
+    "reward_prepositioning_coef": 1.0,
+    "reward_prepositioning_lookahead": 5,
+    "reward_velocity_smoothness": true,
+    "reward_velocity_smoothness_coef": 0.001,
+    "reward_finger_key_distance": true,
+    "reward_finger_key_distance_coef": 1.0
+  },
+
+  "best_top3_combo": {
+    "reward_timing": true,
+    "reward_timing_coef": 1.0,
+    "reward_prepositioning": true,
+    "reward_prepositioning_coef": 1.0,
+    "reward_prepositioning_lookahead": 5,
+    "reward_finger_key_distance": true,
+    "reward_finger_key_distance_coef": 1.0
+  }
+}

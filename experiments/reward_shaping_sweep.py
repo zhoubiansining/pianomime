@@ -372,47 +372,64 @@ def plot_sweep_curves(
     variants: List[str],
     songs: List[str],
     seeds: List[int],
+    eval_interval: int = 10,
 ) -> None:
-    """Plot training curves comparing variants, one subplot per song."""
+    """Plot training curves comparing variants, one subplot per song.
+
+    eval_interval is used to label the x-axis in training-iteration units
+    (each eval point corresponds to a real training iteration number).
+    """
     n_songs = len(songs)
     fig, axes = plt.subplots(
         n_songs, 1,
-        figsize=(11, 4.5 * n_songs),
+        figsize=(11, 5.5 * n_songs),
         squeeze=False,
     )
     fig.suptitle(
         "F1 Training Curves: Reward Shaping Variants",
         fontsize=14, fontweight="bold",
+        y=0.99,
     )
+    fig.subplots_adjust(hspace=0.35)
 
     colors = plt.cm.tab10(np.linspace(0, 1, max(len(variants), 10)))
 
+    # Pre-load all histories to avoid repeated file I/O
+    multi_seed = len(seeds) > 1
+    histories: Dict[Tuple[str, str, int], List[Dict]] = {}
+    for variant, song, seed in itertools.product(variants, songs, seeds):
+        run_name = variant_dir_name(variant, song, seed, multi_seed)
+        histories[(variant, song, seed)] = _load_eval_history(root_dir / run_name)
+
     for song_idx, song in enumerate(songs):
         ax = axes[song_idx, 0]
-        ax.set_title(f"Song: {song}")
-        ax.set_xlabel("Iteration")
+        ax.set_title(f"Song: {song}", pad=10)
+        ax.set_xlabel("Training Iteration")
         ax.set_ylabel("Eval F1")
         ax.grid(True, alpha=0.3)
 
         for variant_idx, variant in enumerate(variants):
-            # Average over seeds for this variant×song
             seed_curves: List[List[float]] = []
+            seed_iters: List[List[int]] = []
             for seed in seeds:
-                run_name = variant_dir_name(variant, song, seed, len(seeds) > 1)
-                hist = _load_eval_history(root_dir / run_name)
-                if hist:
-                    f1s = [h.get("f1", 0.0) for h in hist if h.get("f1") is not None]
-                    if f1s:
-                        seed_curves.append(f1s)
+                hist = histories[(variant, song, seed)]
+                if not hist:
+                    continue
+                f1s = [h.get("f1", 0.0) for h in hist if h.get("f1") is not None]
+                iters = [h.get("iter", i) for i, h in enumerate(hist) if h.get("f1") is not None]
+                if f1s:
+                    seed_curves.append(f1s)
+                    seed_iters.append(iters)
 
             if not seed_curves:
                 continue
 
-            # Trim all curves to the shortest length so we can average
             min_len = min(len(c) for c in seed_curves)
             arr = np.array([c[:min_len] for c in seed_curves], dtype=float)
             mean_curve = arr.mean(axis=0)
-            x = np.arange(min_len)
+
+            # Use x = eval indices * eval_interval (eval always starts at i=0)
+            x = np.arange(min_len) * eval_interval
 
             ax.plot(x, mean_curve, color=colors[variant_idx % len(colors)],
                     linewidth=2, label=variant)
@@ -693,7 +710,8 @@ def main():
 
     # Generate comparison training curves plot
     try:
-        plot_sweep_curves(root_dir, rows, args.variants, args.songs, args.seeds)
+        plot_sweep_curves(root_dir, rows, args.variants, args.songs, args.seeds,
+                          eval_interval=args.eval_interval)
     except Exception as e:
         print(f"[WARN] Failed to generate curves plot: {e}")
 
