@@ -113,15 +113,34 @@ class ResidualRegularizedPPO(PPO):
         residual_smooth_coef: float = 0.0,
         residual_regularization_action_dim: Optional[int] = None,
         residual_regularization_exclude_sustain: bool = True,
+        dual_clip_coef: Optional[float] = None,
+        advantage_clip: Optional[float] = None,
+        log_std_min: Optional[float] = None,
+        log_std_max: Optional[float] = None,
+        policy_ema_decay: Optional[float] = None,
         **kwargs,
     ):
         if residual_l2_coef < 0.0 or residual_smooth_coef < 0.0:
             raise ValueError("Residual regularization coefficients must be non-negative.")
+        if dual_clip_coef is not None and dual_clip_coef <= 1.0:
+            raise ValueError("dual_clip_coef must be greater than 1.0 when enabled.")
+        if advantage_clip is not None and advantage_clip <= 0.0:
+            raise ValueError("advantage_clip must be positive when enabled.")
+        if log_std_min is not None and log_std_max is not None and log_std_min > log_std_max:
+            raise ValueError("log_std_min must be <= log_std_max.")
+        if policy_ema_decay is not None and not 0.0 < policy_ema_decay < 1.0:
+            raise ValueError("policy_ema_decay must be in (0, 1) when enabled.")
         self.residual_action_regularization = residual_action_regularization
         self.residual_l2_coef = residual_l2_coef
         self.residual_smooth_coef = residual_smooth_coef
         self.residual_regularization_action_dim = residual_regularization_action_dim
         self.residual_regularization_exclude_sustain = residual_regularization_exclude_sustain
+        self.dual_clip_coef = dual_clip_coef
+        self.advantage_clip = advantage_clip
+        self.log_std_min = log_std_min
+        self.log_std_max = log_std_max
+        self.policy_ema_decay = policy_ema_decay
+        self._ema_policy_params: Optional[dict[str, th.Tensor]] = None
         self._regularized_action_dim: Optional[int] = None
         super().__init__(*args, **kwargs)
 
@@ -153,6 +172,8 @@ class ResidualRegularizedPPO(PPO):
             **self.policy_kwargs,
         )
         self.policy = self.policy.to(self.device)
+        self._maybe_init_policy_ema()
+        self._clamp_log_std()
         self._regularized_action_dim = self._resolve_regularized_action_dim()
         self.clip_range = get_schedule_fn(self.clip_range)
         if self.clip_range_vf is not None:
@@ -191,6 +212,60 @@ class ResidualRegularizedPPO(PPO):
         if self._regularized_action_dim is None:
             raise RuntimeError("Residual action regularization is not configured.")
         return actions[:, : self._regularized_action_dim]
+
+    def _clamp_log_std(self) -> None:
+        if self.log_std_min is None and self.log_std_max is None:
+            return
+        if not hasattr(self.policy, "log_std"):
+            return
+        with th.no_grad():
+            min_value = -float("inf") if self.log_std_min is None else self.log_std_min
+            max_value = float("inf") if self.log_std_max is None else self.log_std_max
+            self.policy.log_std.clamp_(min=min_value, max=max_value)
+
+    def _maybe_init_policy_ema(self) -> None:
+        if self.policy_ema_decay is None:
+            return
+        self._ema_policy_params = {
+            name: param.detach().clone()
+            for name, param in self.policy.named_parameters()
+            if param.requires_grad
+        }
+
+    def _update_policy_ema(self) -> None:
+        if self.policy_ema_decay is None:
+            return
+        if self._ema_policy_params is None:
+            self._maybe_init_policy_ema()
+            return
+        with th.no_grad():
+            for name, param in self.policy.named_parameters():
+                if name not in self._ema_policy_params:
+                    continue
+                self._ema_policy_params[name].mul_(self.policy_ema_decay).add_(
+                    param.detach(),
+                    alpha=1.0 - self.policy_ema_decay,
+                )
+
+    def swap_to_ema_policy(self) -> Optional[dict[str, th.Tensor]]:
+        if self._ema_policy_params is None:
+            return None
+        backup = {}
+        with th.no_grad():
+            for name, param in self.policy.named_parameters():
+                if name not in self._ema_policy_params:
+                    continue
+                backup[name] = param.detach().clone()
+                param.copy_(self._ema_policy_params[name])
+        return backup
+
+    def restore_policy_parameters(self, backup: Optional[dict[str, th.Tensor]]) -> None:
+        if backup is None:
+            return
+        with th.no_grad():
+            for name, param in self.policy.named_parameters():
+                if name in backup:
+                    param.copy_(backup[name])
 
     def _compute_residual_regularization(
         self,
@@ -233,10 +308,12 @@ class ResidualRegularizedPPO(PPO):
         entropy_losses = []
         pg_losses, value_losses = [], []
         clip_fractions = []
+        clipped_advantage_fractions = []
         residual_l2_losses = []
         residual_smooth_losses = []
         residual_regularization_losses = []
         smooth_valid_fractions = []
+        ent_coef = float(self.ent_coef(self._current_progress_remaining)) if callable(self.ent_coef) else float(self.ent_coef)
 
         continue_training = True
         for epoch in range(self.n_epochs):
@@ -254,12 +331,25 @@ class ResidualRegularizedPPO(PPO):
                 advantages = rollout_data.advantages
                 if self.normalize_advantage and len(advantages) > 1:
                     advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+                if self.advantage_clip is not None:
+                    clipped_advantage_fractions.append(
+                        th.mean((th.abs(advantages) > self.advantage_clip).float()).item()
+                    )
+                    advantages = th.clamp(advantages, -self.advantage_clip, self.advantage_clip)
 
                 ratio = th.exp(log_prob - rollout_data.old_log_prob)
 
                 policy_loss_1 = advantages * ratio
                 policy_loss_2 = advantages * th.clamp(ratio, 1 - clip_range, 1 + clip_range)
-                policy_loss = -th.min(policy_loss_1, policy_loss_2).mean()
+                surrogate_loss = th.min(policy_loss_1, policy_loss_2)
+                if self.dual_clip_coef is not None:
+                    dual_clip_loss = self.dual_clip_coef * advantages
+                    surrogate_loss = th.where(
+                        advantages < 0,
+                        th.max(surrogate_loss, dual_clip_loss),
+                        surrogate_loss,
+                    )
+                policy_loss = -surrogate_loss.mean()
 
                 pg_losses.append(policy_loss.item())
                 clip_fraction = th.mean((th.abs(ratio - 1) > clip_range).float()).item()
@@ -280,7 +370,7 @@ class ResidualRegularizedPPO(PPO):
                     entropy_loss = -th.mean(entropy)
                 entropy_losses.append(entropy_loss.item())
 
-                loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
+                loss = policy_loss + ent_coef * entropy_loss + self.vf_coef * value_loss
 
                 if self._uses_residual_regularization:
                     if not hasattr(rollout_data, "prev_observations"):
@@ -316,6 +406,8 @@ class ResidualRegularizedPPO(PPO):
                 loss.backward()
                 th.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
                 self.policy.optimizer.step()
+                self._clamp_log_std()
+                self._update_policy_ema()
 
             self._n_updates += 1
             if not continue_training:
@@ -330,6 +422,12 @@ class ResidualRegularizedPPO(PPO):
         self.logger.record("train/clip_fraction", np.mean(clip_fractions))
         self.logger.record("train/loss", loss.item())
         self.logger.record("train/explained_variance", explained_var)
+        self.logger.record("train/ent_coef", ent_coef)
+        if self.dual_clip_coef is not None:
+            self.logger.record("train/dual_clip_coef", self.dual_clip_coef)
+        if self.advantage_clip is not None:
+            self.logger.record("train/advantage_clip", self.advantage_clip)
+            self.logger.record("train/advantage_clip_fraction", np.mean(clipped_advantage_fractions))
         if self._uses_residual_regularization:
             self.logger.record("train/residual_l2_loss", np.mean(residual_l2_losses))
             self.logger.record("train/residual_smooth_loss", np.mean(residual_smooth_losses))
@@ -339,6 +437,12 @@ class ResidualRegularizedPPO(PPO):
             self.logger.record("train/residual_smooth_coef", self.residual_smooth_coef)
         if hasattr(self.policy, "log_std"):
             self.logger.record("train/std", th.exp(self.policy.log_std).mean().item())
+            if self.log_std_min is not None:
+                self.logger.record("train/log_std_min_limit", self.log_std_min)
+            if self.log_std_max is not None:
+                self.logger.record("train/log_std_max_limit", self.log_std_max)
+        if self.policy_ema_decay is not None:
+            self.logger.record("train/policy_ema_decay", self.policy_ema_decay)
 
         self.logger.record("train/n_updates", self._n_updates, exclude="tensorboard")
         self.logger.record("train/clip_range", clip_range)

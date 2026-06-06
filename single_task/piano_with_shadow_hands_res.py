@@ -69,6 +69,12 @@ class PianoWithShadowHandsResidual(base.PianoTask):
         curriculum: bool = False,
         shift: int = 0,
         enable_joints_vel_obs: bool = False,
+        key_press_positive_weight: float = 0.5,
+        key_press_negative_weight: float = 0.5,
+        key_press_negative_mode: str = "any",
+        key_press_reward_scale: float = 2.0,
+        recall_activation_bonus_coef: float = 0.0,
+        missed_note_penalty_coef: float = 0.0,
         **kwargs,
     ) -> None:
         """Task constructor.
@@ -109,6 +115,14 @@ class PianoWithShadowHandsResidual(base.PianoTask):
             curriculum: If True, use curriculum learning.
             shift: The number of notes to shift the MIDI file by.
             enable_joints_vel_obs: If True, enable the joint velocity observation.
+            key_press_positive_weight: Weight for matching target keys.
+            key_press_negative_weight: Weight for avoiding non-target key presses.
+            key_press_negative_mode: How to score wrong keys. ``any`` matches the
+                original all-or-nothing penalty, while ``fraction`` penalizes the
+                activated wrong-key fraction.
+            key_press_reward_scale: Multiplier applied to the key press reward.
+            recall_activation_bonus_coef: Extra reward for activating target keys.
+            missed_note_penalty_coef: Penalty for inactive target keys.
         """
         super().__init__(arena=stage.Stage(), **kwargs)
         if note_trajectory is None and midi is None:
@@ -147,6 +161,20 @@ class PianoWithShadowHandsResidual(base.PianoTask):
         self._curriculum_length = 100 # initial curriculum length (5 seconds)
         self._shift = shift
         self._enable_joints_vel_obs = enable_joints_vel_obs
+        if key_press_positive_weight < 0.0 or key_press_negative_weight < 0.0:
+            raise ValueError("Key press reward weights must be non-negative.")
+        if key_press_reward_scale < 0.0:
+            raise ValueError("key_press_reward_scale must be non-negative.")
+        if recall_activation_bonus_coef < 0.0 or missed_note_penalty_coef < 0.0:
+            raise ValueError("Recall bonus and missed-note penalty coefficients must be non-negative.")
+        if key_press_negative_mode not in ("any", "fraction"):
+            raise ValueError("key_press_negative_mode must be one of {'any', 'fraction'}.")
+        self._key_press_positive_weight = key_press_positive_weight
+        self._key_press_negative_weight = key_press_negative_weight
+        self._key_press_negative_mode = key_press_negative_mode
+        self._key_press_reward_scale = key_press_reward_scale
+        self._recall_activation_bonus_coef = recall_activation_bonus_coef
+        self._missed_note_penalty_coef = missed_note_penalty_coef
 
         if not disable_fingering_reward and not disable_colorization:
             self._colorize_fingertips()
@@ -348,11 +376,20 @@ class PianoWithShadowHandsResidual(base.PianoTask):
                 margin=(_KEY_CLOSE_ENOUGH_TO_PRESSED * 10),
                 sigmoid="gaussian",
             )
-            rew += 0.5 * rews.mean()
-        # If there are any false positives, the remaining 0.5 reward is lost.
+            activation_recall = float(self.piano.activation[on].mean())
+            rew += self._key_press_positive_weight * float(rews.mean())
+            rew += self._recall_activation_bonus_coef * activation_recall
+            rew -= self._missed_note_penalty_coef * (1.0 - activation_recall)
+        # By default, any false positive loses the negative-side reward. Recall
+        # experiments may use a softer per-key fraction penalty instead.
         off = np.flatnonzero(1 - self._goal_current[:-1])
-        rew += 0.5 * (1 - float(self.piano.activation[off].any()))
-        return 2*rew
+        if off.size > 0:
+            if self._key_press_negative_mode == "fraction":
+                no_wrong_score = 1.0 - float(self.piano.activation[off].mean())
+            else:
+                no_wrong_score = 1.0 - float(self.piano.activation[off].any())
+            rew += self._key_press_negative_weight * no_wrong_score
+        return self._key_press_reward_scale * rew
 
     def _compute_fingering_reward(self, physics: mjcf.Physics) -> float:
         """Reward for minimizing the distance between the fingers and the keys."""

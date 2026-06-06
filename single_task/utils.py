@@ -26,6 +26,16 @@ import gymnasium as gym
 import pickle
 from stable_baselines3.common.utils import set_random_seed
 
+def get_key_press_reward_kwargs(args) -> dict:
+    return {
+        "key_press_positive_weight": getattr(args, "key_press_positive_weight", 0.5),
+        "key_press_negative_weight": getattr(args, "key_press_negative_weight", 0.5),
+        "key_press_negative_mode": getattr(args, "key_press_negative_mode", "any"),
+        "key_press_reward_scale": getattr(args, "key_press_reward_scale", 2.0),
+        "recall_activation_bonus_coef": getattr(args, "recall_activation_bonus_coef", 0.0),
+        "missed_note_penalty_coef": getattr(args, "missed_note_penalty_coef", 0.0),
+    }
+
 def get_env_no_residual(args, record_dir: Optional[Path] = None):
     left_hand_action_list = np.load(
         f"dataset/high_level_trajectories/{args.mimic_task}_left_hand_action_list.npy"
@@ -135,6 +145,7 @@ def get_env(args, record_dir: Optional[Path] = None, enable_midi_evaluation: boo
                 reduced_action_space=False,
                 residual_factor=args.residual_factor,
                 curriculum=args.curriculum,
+                **get_key_press_reward_kwargs(args),
             )
     else:   
         task = piano_with_shadow_hands_res.PianoWithShadowHandsResidual(
@@ -151,6 +162,7 @@ def get_env(args, record_dir: Optional[Path] = None, enable_midi_evaluation: boo
             gravity_compensation=True,
             reduced_action_space=False,
             residual_factor=args.residual_factor,
+            **get_key_press_reward_kwargs(args),
         )
 
     env = composer_utils.Environment(
